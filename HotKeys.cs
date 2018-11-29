@@ -100,6 +100,11 @@ namespace HSTA
 
         protected void Update()
         {
+            // If no keys are pressed then just exit out
+            if( !Input.anyKey )
+            {
+                return;
+            }
             foreach (KeyValuePair<string, ActionFunction> shortcut in _shortcuts)
             {
                 if (shortcut.Key.Length > 0 && Input.GetKeyDown(shortcut.Key))
