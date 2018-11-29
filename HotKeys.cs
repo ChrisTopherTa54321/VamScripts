@@ -112,7 +112,7 @@ namespace HSTA
                     // Handle the keypress and set the repeat delay timer
                     shortcut.Value();
                     _lastKeyPressed = shortcut.Key;
-                    _keyRepeatTimestamp = Time.time + REPEAT_HOLD_DELAY;
+                    _keyRepeatTimestamp = Time.unscaledTime + REPEAT_HOLD_DELAY;
                     break;
                 }
             }
@@ -121,9 +121,9 @@ namespace HSTA
             if (Input.GetKey(_lastKeyPressed) )
             {
                 // Still holding down the key... is it time for a repeat?
-                if (Time.time >= _keyRepeatTimestamp)
+                if (Time.unscaledTime >= _keyRepeatTimestamp)
                 {
-                    _keyRepeatTimestamp = Time.time + REPEAT_RATE_DELAY;
+                    _keyRepeatTimestamp = Time.unscaledTime + REPEAT_RATE_DELAY;
                     _shortcuts[_lastKeyPressed]();
                 }
             }
