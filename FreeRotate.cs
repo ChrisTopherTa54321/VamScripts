@@ -2,7 +2,7 @@
 
 namespace HSTA
 {
-    public class Fly : MVRScript
+    public class FreeRotate : MVRScript
     {
         const float DEADZONE = 0.01f;
 
