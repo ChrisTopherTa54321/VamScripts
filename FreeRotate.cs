@@ -46,8 +46,8 @@ namespace HSTA
                 return;
             }
             
-            bool btn1 = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, activeController);
-            bool btn2 = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, activeController);
+            bool btn1 = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, activeController);
+            bool btn2 = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, activeController);
             float pitchVal = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, activeController).y;
             float rollVal = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, activeController).x;
 
