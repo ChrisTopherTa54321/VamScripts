@@ -6,6 +6,10 @@ namespace HSTA
     {
         const float DEADZONE = 0.01f;
 
+        OVRInput.Controller[] _controllers = { OVRInput.Controller.RTouch, OVRInput.Controller.LTouch };
+        float _enableNavigationCountdown = 0;
+        const float NAVIGATION_DISABLE_TIMER = .25f;
+
         public override void Init()
         {
             try
@@ -16,85 +20,102 @@ namespace HSTA
                 SuperController.LogError("Exception caught: " + e);
             }
         }
-        
 
         protected void Update()
         {
+            bool didSomething = false;
             // SuperController doesn't give a great API for dealing with Oculus and Vive,
             // but we'll try to use headset-agnostic methods...
             SuperController sc = SuperController.singleton;
 
-            // Pitch and roll ... ish. Whatever, it gets the job done.
-            JoystickControl.Axis pitchAxis = sc.navigationForwardAxis;
-            JoystickControl.Axis rollAxis = sc.navigationSideAxis;
+            OVRInput.Controller activeController = OVRInput.Controller.None;
 
-            // Whether or not axis is swapped is a private variable, and Reflection is prohibited, so we can't know to swap
-
-            // Can only query button changes, not value, so we have to watch for up and down
-            if( sc.GetRightQuickGrab() )
+            // Find the active controller
+            foreach( var controller in _controllers )
             {
-                _rightBtn1Down = true;
-            }
-            else if( sc.GetRightQuickRelease() )
-            {
-                _rightBtn1Down = false;
+                if( OVRInput.IsControllerConnected( controller ) )
+                {
+                    activeController = controller;
+                    break;
+                }
             }
 
-           if( sc.GetLeftQuickGrab() )
+            // Couldn't find a controller!
+            if( activeController == OVRInput.Controller.None )
             {
-                _leftBtn1Down = true;
-            }
-            else if( sc.GetLeftQuickRelease() )
-            {
-                _leftBtn1Down = false;
+                return;
             }
             
+            bool btn1 = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, activeController);
+            bool btn2 = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, activeController);
+            float pitchVal = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, activeController).y;
+            float rollVal = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, activeController).x;
 
-            float pitchVal = JoystickControl.GetAxis(pitchAxis);
-            float rollVal = JoystickControl.GetAxis(rollAxis);
-
-            // Second button can only be checked for change to down position, but good enough for reset switch
-            bool bothPressed = _rightBtn1Down && sc.GetRightGrabToggle();
-
-            if ( _rightBtn1Down )
+            if ( btn1 )
             {
-                Transform trans = sc.navigationRig;
-                Transform around = sc.navigationCamera;//.transform;
+                Vector3 rotation = SuperController.singleton.navigationRig.rotation.eulerAngles;
 
                 if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
                 {
-                    trans.RotateAround( around.position, Vector3.right, pitchVal);
+                    rotation.x += pitchVal;
+                    SuperController.singleton.navigationRig.rotation = Quaternion.Euler(rotation);
+                    didSomething = true;
                 }
                 if (rollVal > DEADZONE || rollVal < -DEADZONE)
                 {
-                    trans.RotateAround( around.position, Vector3.forward, rollVal);
+                    rotation.z += rollVal;
+                    didSomething = true;
+                    SuperController.singleton.navigationRig.rotation = Quaternion.Euler(rotation);
                 }
             }
 
 
-            if( _leftBtn1Down )
+            if( btn2 )
             {
                 if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
                 {
                     Vector3 forward = sc.OVRCenterCamera.transform.forward;
-                    forward *= (-pitchVal * 0.5f * Time.deltaTime / Time.timeScale);
+                    forward *= (pitchVal * Time.deltaTime / Time.timeScale);
                     sc.navigationRig.position += forward;
+                    didSomething = true;
+                }
+                if (rollVal > DEADZONE || rollVal < -DEADZONE)
+                {
+                    Vector3 right = sc.OVRCenterCamera.transform.right;
+                    right *= (rollVal * Time.deltaTime / Time.timeScale);
+                    sc.navigationRig.position += right;
+                    didSomething = true;
                 }
             }
-            
-            
+
+
             // If both pressed then reset rotation
-            if( bothPressed )
+            if( btn1 && btn2 )
             {
                 Vector3 rotation = SuperController.singleton.navigationRig.rotation.eulerAngles;
                 rotation.x = 0;
                 rotation.z = 0;
                 SuperController.singleton.navigationRig.rotation = Quaternion.Euler(rotation);
+                didSomething = true;
+            }
+
+
+            // If any action was performed then temporarily disable standard navigation
+            if( didSomething )
+            {
+                sc.disableNavigation = true;
+                _enableNavigationCountdown = NAVIGATION_DISABLE_TIMER;
+            }
+            else if( _enableNavigationCountdown > 0 )
+            {
+                _enableNavigationCountdown -= Time.deltaTime;
+                if( _enableNavigationCountdown <= 0.0f )
+                {
+                    _enableNavigationCountdown = 0;
+                    sc.disableNavigation = false;
+                }
             }
         }
-
-        private bool _rightBtn1Down = false;
-        private bool _leftBtn1Down = false;
 
     }
 }
