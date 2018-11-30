@@ -28,7 +28,7 @@ namespace HSTA
         // Ranges for each modifiable variable. Order is 'step size', 'minimum value', 'maximum value'
         Range _worldScale = new Range(0.00025f, 0.01f, 10.0f);
         Range _timeScale = new Range(0.01f, 0.01f, 1.0f);
-        Range _animationSpeed = new Range(0.05f, -1.0f, 5.0f);
+        Range _animationSpeed = new Range(0.05f, -3.0f, 5.0f);
 
         const float SHIFT_MULTIPLIER = 5.0f; // Multiplier to apply to step size if holding down shift
 
