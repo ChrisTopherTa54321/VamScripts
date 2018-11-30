@@ -69,6 +69,18 @@ namespace MVRPlugin {
                 receiver = receivingAtom.GetStorableByID(receiverID);
                 if (receiver != null) {
                     foreach (string floatParam in receiver.GetFloatParamNames()) {
+                        // Ensure target is animatable
+                        if (floatParam != "None" && floatParam.Length > 0)
+                        {
+                            JSONStorable geometry = containingAtom.GetStorableByID("geometry");
+                            DAZCharacterSelector character = geometry as DAZCharacterSelector;
+                            GenerateDAZMorphsControlUI morphControl = character.morphsControlUI;
+                            DAZMorph morph = morphControl.GetMorphByDisplayName(floatParam);
+                            if (morph != null)
+                            {
+                                morph.animatable = true;
+                            }
+                        }
                         receiverTargetChoices.Add(floatParam);
                     }
                 } else if (receiverID != "None") {
