@@ -48,43 +48,66 @@ namespace HSTA
             
             bool btn1 = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, activeController);
             bool btn2 = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, activeController);
+            bool clicked = OVRInput.Get(OVRInput.Button.PrimaryThumbstick, activeController);
             float pitchVal = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, activeController).y;
             float rollVal = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, activeController).x;
 
             if ( btn1 )
             {
-                Vector3 rotation = SuperController.singleton.navigationRig.rotation.eulerAngles;
+                Transform target = sc.navigationRigParent;
+                //Transform target = sc.navigationRig.transform;
+                Vector3 rotation = target.rotation.eulerAngles;
 
                 if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
                 {
-                    rotation.x += pitchVal;
-                    SuperController.singleton.navigationRig.rotation = Quaternion.Euler(rotation);
+                    Vector3 axis = sc.OVRCenterCamera.transform.right;
+                    target.Rotate(axis, pitchVal, Space.World);
                     didSomething = true;
                 }
                 if (rollVal > DEADZONE || rollVal < -DEADZONE)
                 {
-                    rotation.z += rollVal;
+                    Vector3 axis = sc.OVRCenterCamera.transform.forward;
+                    target.Rotate(axis, rollVal, Space.World);
                     didSomething = true;
-                    SuperController.singleton.navigationRig.rotation = Quaternion.Euler(rotation);
                 }
             }
 
 
             if( btn2 )
             {
-                if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
+                if( clicked )
                 {
-                    Vector3 forward = sc.OVRCenterCamera.transform.forward;
-                    forward *= (pitchVal * Time.deltaTime / Time.timeScale);
-                    sc.navigationRig.position += forward;
-                    didSomething = true;
+                    if (pitchVal > DEADZONE || pitchVal < -DEADZONE)
+                    {
+                        Vector3 dir = sc.OVRCenterCamera.transform.up;
+                        dir *= (pitchVal * Time.deltaTime / Time.timeScale);
+                        sc.navigationRig.position += dir;
+                        didSomething = true;
+                    }
+                    if (rollVal > DEADZONE || rollVal < -DEADZONE)
+                    {
+                        Vector3 dir = sc.OVRCenterCamera.transform.right;
+                        dir *= (rollVal * Time.deltaTime / Time.timeScale);
+                        sc.navigationRig.position += dir;
+                        didSomething = true;
+                    }
                 }
-                if (rollVal > DEADZONE || rollVal < -DEADZONE)
+                else
                 {
-                    Vector3 right = sc.OVRCenterCamera.transform.right;
-                    right *= (rollVal * Time.deltaTime / Time.timeScale);
-                    sc.navigationRig.position += right;
-                    didSomething = true;
+                    if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
+                    {
+                        Vector3 dir = sc.OVRCenterCamera.transform.forward;
+                        dir *= (pitchVal * Time.deltaTime / Time.timeScale);
+                        sc.navigationRig.position += dir;
+                        didSomething = true;
+                    }
+                    if (rollVal > DEADZONE || rollVal < -DEADZONE)
+                    {
+                        Vector3 dir = sc.OVRCenterCamera.transform.right;
+                        dir *= (rollVal * Time.deltaTime / Time.timeScale);
+                        sc.navigationRig.position += dir;
+                        didSomething = true;
+                    }
                 }
             }
 
