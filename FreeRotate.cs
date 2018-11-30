@@ -8,7 +8,12 @@ namespace HSTA
 
         OVRInput.Controller[] _controllers = { OVRInput.Controller.RTouch, OVRInput.Controller.LTouch };
         float _enableNavigationCountdown = 0;
-        const float NAVIGATION_DISABLE_TIMER = .25f;
+
+        const float NAVIGATION_DISABLE_TIMER = 0.05f;
+        const float DOUBLE_CLICK_TIME = 0.25f;
+
+        private float _doubleClickTimer = 0.0f;
+        private bool _bothPressed = false;
 
         public override void Init()
         {
@@ -48,52 +53,66 @@ namespace HSTA
             
             bool btn1 = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, activeController);
             bool btn2 = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, activeController);
-            bool clicked = OVRInput.Get(OVRInput.Button.PrimaryThumbstick, activeController);
+            bool bothPressed = btn1 && btn2;
+            bool thumbPressed = OVRInput.Get(OVRInput.Button.PrimaryThumbstick, activeController);
             float pitchVal = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, activeController).y;
             float rollVal = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, activeController).x;
+            bool doubleClicked = false;
 
-            if ( btn1 )
+            // Check for double clicking
+            // Both were pressed last update, but not this update
+            if (!bothPressed && _bothPressed)
             {
-                Transform target = sc.navigationRigParent;
-                //Transform target = sc.navigationRig.transform;
-                Vector3 rotation = target.rotation.eulerAngles;
-
-                if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
-                {
-                    Vector3 axis = sc.OVRCenterCamera.transform.right;
-                    target.Rotate(axis, pitchVal, Space.World);
-                    didSomething = true;
+                _doubleClickTimer = DOUBLE_CLICK_TIME;
+                _bothPressed = false;
+            }
+            else if (_bothPressed) // Both pressed last update, still pressed
+            {
+            }
+            else if( bothPressed ) // Both pressed, but weren't last update
+            {
+                if( _doubleClickTimer > 0.0f )
+                { 
+                    doubleClicked = true;
+                    _doubleClickTimer = 0.0f;
                 }
-                if (rollVal > DEADZONE || rollVal < -DEADZONE)
+                else
                 {
-                    Vector3 axis = sc.OVRCenterCamera.transform.forward;
-                    target.Rotate(axis, rollVal, Space.World);
-                    didSomething = true;
+                    _bothPressed = true;
                 }
+            }
+            if( _doubleClickTimer > 0.0f )
+            {
+                _doubleClickTimer -= Time.unscaledDeltaTime;
             }
 
 
-            if( btn2 )
+
+            Transform rotateTarget = sc.navigationRigParent;
+            if( !bothPressed )
             {
-                if( clicked )
+                if ( btn1 )
                 {
-                    if (pitchVal > DEADZONE || pitchVal < -DEADZONE)
+                    // Rotate
+
+                    if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
                     {
-                        Vector3 dir = sc.OVRCenterCamera.transform.up;
-                        dir *= (pitchVal * Time.deltaTime / Time.timeScale);
-                        sc.navigationRig.position += dir;
+                        Vector3 axis = sc.OVRCenterCamera.transform.right;
+                        rotateTarget.Rotate(axis, pitchVal, Space.World);
                         didSomething = true;
                     }
                     if (rollVal > DEADZONE || rollVal < -DEADZONE)
                     {
-                        Vector3 dir = sc.OVRCenterCamera.transform.right;
-                        dir *= (rollVal * Time.deltaTime / Time.timeScale);
-                        sc.navigationRig.position += dir;
+                        Vector3 axis = sc.OVRCenterCamera.transform.forward;
+                        rotateTarget.Rotate(axis, rollVal, Space.World);
                         didSomething = true;
                     }
                 }
-                else
+
+
+                if( btn2 )
                 {
+                    // Fly
                     if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
                     {
                         Vector3 dir = sc.OVRCenterCamera.transform.forward;
@@ -110,10 +129,26 @@ namespace HSTA
                     }
                 }
             }
+            else if( !doubleClicked ) // Both pressed, no double click
+            {
+                // Fly up/down
+                if (pitchVal > DEADZONE || pitchVal < -DEADZONE)
+                {
+                    Vector3 dir = sc.OVRCenterCamera.transform.up;
+                    dir *= (pitchVal * Time.deltaTime / Time.timeScale);
+                    sc.navigationRig.position += dir;
+                    didSomething = true;
+                }
+                if (rollVal > DEADZONE || rollVal < -DEADZONE)
+                {
+                    // Rotate left/right
 
-
-            // If both pressed then reset rotation
-            if( btn1 && btn2 )
+                    Vector3 axis = sc.OVRCenterCamera.transform.up;
+                    rotateTarget.Rotate(axis, rollVal, Space.World);
+                    didSomething = true;
+                }
+            }
+            else // Double clicked
             {
                 Vector3 rotation = SuperController.singleton.navigationRig.rotation.eulerAngles;
                 rotation.x = 0;
