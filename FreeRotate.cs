@@ -104,7 +104,7 @@ namespace HSTA
                     if (rollVal > DEADZONE || rollVal < -DEADZONE)
                     {
                         Vector3 axis = sc.OVRCenterCamera.transform.forward;
-                        rotateTarget.Rotate(axis, rollVal, Space.World);
+                        rotateTarget.Rotate(axis, -rollVal, Space.World);
                         didSomething = true;
                     }
                 }
