@@ -19,7 +19,7 @@ namespace HSTA
         {
             try
             {
-                if( containingAtom.type != "Person" )
+                if (containingAtom.type != "Person")
                 {
                     SuperController.LogError("Use this plugin on a Person only");
                 }
@@ -28,9 +28,9 @@ namespace HSTA
                     _control = containingAtom.mainController;
                     _frozenControls = new List<FreeControllerV3>();
                     FreeControllerV3[] controls = containingAtom.freeControllers;
-                    foreach( var control in controls )
+                    foreach (var control in controls)
                     {
-                        if( control != _control )
+                        if (control != _control)
                         {
                             _frozenControls.Add(control);
                         }
@@ -50,19 +50,23 @@ namespace HSTA
         {
             Vector3 lastPos = _control.transform.position;
             List<Vector3> frozenPositions = new List<Vector3>();
-            foreach ( var control in _frozenControls )
+            List<Quaternion> frozenRotations = new List<Quaternion>();
+            foreach (var control in _frozenControls)
             {
                 frozenPositions.Add(control.transform.position);
+                frozenRotations.Add(control.transform.rotation);
             }
+
 
             while (true)
             {
                 yield return new WaitForFixedUpdate();
-                if( lastPos != _control.transform.position )
+                if (lastPos != _control.transform.position)
                 {
-                    for( int i = 0; i < _frozenControls.Count; ++i )
+                    for (int i = 0; i < _frozenControls.Count; ++i)
                     {
                         _frozenControls[i].transform.position = frozenPositions[i];
+                        _frozenControls[i].transform.rotation = frozenRotations[i];
                     }
                 }
             }
@@ -70,7 +74,7 @@ namespace HSTA
 
         void OnEnable()
         {
-            if( _initialized )
+            if (_initialized)
             {
                 _routine = StartCoroutine(FreezeControlsRoutine());
             }
