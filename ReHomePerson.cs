@@ -49,6 +49,7 @@ namespace HSTA
         private IEnumerator FreezeControlsRoutine()
         {
             Vector3 lastPos = _control.transform.position;
+            Quaternion lastRot = _control.transform.rotation;
             List<Vector3> frozenPositions = new List<Vector3>();
             List<Quaternion> frozenRotations = new List<Quaternion>();
             foreach (var control in _frozenControls)
@@ -61,7 +62,7 @@ namespace HSTA
             while (true)
             {
                 yield return new WaitForFixedUpdate();
-                if (lastPos != _control.transform.position)
+                if (lastPos != _control.transform.position || lastRot != _control.transform.rotation )
                 {
                     for (int i = 0; i < _frozenControls.Count; ++i)
                     {
