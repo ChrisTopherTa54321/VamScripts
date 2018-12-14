@@ -70,6 +70,7 @@ namespace HSTA
                         _frozenControls[i].transform.rotation = frozenRotations[i];
                     }
                     lastPos = _control.transform.position;
+                    lastRot = _control.transform.rotation;
                 }
             }
         }
