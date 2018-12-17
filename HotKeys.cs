@@ -42,6 +42,10 @@ namespace HSTA
         private List<ChangeScaleFunction> _setScaleFuncs;
         private int _scaleFuncsIdx = 0;
 
+        const float WORLD_SCALE_HEIGHT_STEP = .0001f;
+        const float WORLD_SCALE_HEIGHT_STEP_DEFAULT = .0011f;
+        float _ws_height_mult = WORLD_SCALE_HEIGHT_STEP_DEFAULT;
+
         public override void Init()
         {
             try
@@ -88,6 +92,20 @@ namespace HSTA
                         "l",
                         () => _setScaleFuncs[_scaleFuncsIdx]( 1.0f )
                     },
+                    {
+                        "j",
+                        () => _ws_height_mult += WORLD_SCALE_HEIGHT_STEP
+                    },
+                    {
+                        "k",
+                        () => _ws_height_mult -= WORLD_SCALE_HEIGHT_STEP
+                    },
+                    {
+                        "h",
+                        () => _ws_height_mult = ( _ws_height_mult == 0.0f ) ? WORLD_SCALE_HEIGHT_STEP_DEFAULT : 0.0f
+                              
+                    }
+
 
                 };
             }
@@ -138,11 +156,18 @@ namespace HSTA
 
         private void ChangeWorldScale(float aStepMult)
         {
+            SuperController sc = SuperController.singleton;
             if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
             {
                 aStepMult *= SHIFT_MULTIPLIER;
             }
-            SetWorldScale(SuperController.singleton.worldScale + _worldScale.step * aStepMult );
+            SetWorldScale(sc.worldScale + _worldScale.step * aStepMult );
+
+
+            // Modify player height with scale
+            Vector3 dir = Vector3.down;
+            dir *= aStepMult * _ws_height_mult;
+            sc.navigationRig.position += dir;
         }
 
 
