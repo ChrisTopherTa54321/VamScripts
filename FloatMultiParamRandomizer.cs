@@ -15,6 +15,7 @@ namespace HSTA
     public class FloatMultiParamRandomizer : MVRScript
     {
         const string pluginText = "V1.0";
+        const string saveExt = "fpmr";
         public override void Init()
         {
             try
@@ -49,6 +50,32 @@ namespace HSTA
                 // set atom to current atom to initialize
                 _atomJSON.val = containingAtom.uid;
 
+
+                var btn = CreateButton("Load Preset");
+                btn.button.onClick.AddListener(() =>
+                {
+                    uFileBrowser.FileBrowser browser = SuperController.singleton.fileBrowserUI;
+
+                    browser.defaultPath = SuperController.singleton.savesDirResolved;;
+                    browser.SetTextEntry(false);
+                    browser.fileFormat = saveExt;
+                    browser.Show(HandleLoadPreset);
+                });
+
+                _addAnimatable = new JSONStorableBool("Auto-set 'animatable' on load", true);
+                CreateToggle(_addAnimatable);
+
+                btn = CreateButton("Save Preset");
+                btn.button.onClick.AddListener(() =>
+                {
+                    uFileBrowser.FileBrowser browser = SuperController.singleton.fileBrowserUI;
+
+                    browser.defaultPath = SuperController.singleton.savesDirResolved; ;
+                    browser.SetTextEntry(true);
+                    browser.Show(HandleSavePreset);
+                    browser.fileEntryField.text = String.Format("{0}.{1}", ((int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds).ToString(), saveExt);
+                    browser.ActivateFileNameField();
+                });
 
                 // Create sliders
                 CreateToggle(_displayRandomizer._enabled, true);
@@ -106,6 +133,99 @@ namespace HSTA
         }
 
 
+
+        void HandleSavePreset(string aPath)
+        {
+            if (String.IsNullOrEmpty(aPath))
+            {
+                return;
+            }
+
+            if( !aPath.ToLower().EndsWith(saveExt.ToLower()))
+            {
+                aPath += "." + saveExt;
+            }
+            JSONClass saveJson = new JSONClass();
+
+            saveJson["atom"] = _atom.name;
+            saveJson["receiver"] = _receiver.name;
+            saveJson["savedBy"] = pluginText;
+            saveJson["targets"] = new JSONArray();
+            foreach( var randomizer in _randomizerList )
+            {
+                JSONClass randomizerNode = new JSONClass();
+                saveJson["targets"].Add(randomizerNode);
+                randomizerNode["id"] = randomizer._id;
+                foreach ( var storable in randomizer.GetStorableBools() )
+                {
+                    storable.StoreJSON(randomizerNode);
+                }
+                foreach (var storable in randomizer.GetStorableFloats())
+                {
+                    storable.StoreJSON(randomizerNode);
+                }
+            }
+
+            this.SaveJSON(saveJson, aPath);
+        }
+
+        void HandleLoadPreset( string aPath )
+        {
+            if (String.IsNullOrEmpty(aPath))
+            {
+                return;
+            }
+
+            var saveJson = this.LoadJSON(aPath);
+            SyncAtom(_atom.name);
+
+            string receiver = saveJson["receiver"].Value;
+            SyncReceiver(receiver);
+
+            foreach ( JSONNode target in saveJson["targets"].AsArray )
+            {
+                string targetId = target["id"].Value;
+                var randomizer = GetRandomizerById(targetId);
+                if ( randomizer != null )
+                {
+                    randomizer.RestoreFromJson(target);
+                }
+                else
+                {
+                    if( _addAnimatable.val && receiver == "geometry" )
+                    {
+                        // Ensure target is animatable
+                        JSONStorable geometry = containingAtom.GetStorableByID("geometry");
+                        DAZCharacterSelector character = geometry as DAZCharacterSelector;
+                        GenerateDAZMorphsControlUI morphControl = character.morphsControlUI;
+                        DAZMorph morph = morphControl.GetMorphByDisplayName(targetId);
+                        if (morph != null)
+                        {
+                            morph.animatable = true;
+                            // Add the newly-animatable target to the list and try again
+                            SyncTargetChoices();
+                            randomizer = GetRandomizerById(targetId);
+                            if( null != randomizer )
+                            {
+                                randomizer.RestoreFromJson(target);
+                            }
+                        }
+                    }
+
+                    // Still no randomizer? Report the missing param
+                    if( randomizer == null )
+                    {
+                        SuperController.LogMessage("Failed to add randomizer for " + targetId);
+                    }
+
+                }
+            }
+
+            SyncTargetChoices();
+            SyncTargets(_targetJson.val);
+            UpdateEnabledList();
+        }
+
         void RestoreParamsFromSaveJson()
         {
             JSONNode savedJson = GetPluginJsonFromSave();
@@ -118,6 +238,18 @@ namespace HSTA
             }
         }
 
+
+        ParamRandomizer GetRandomizerById( string aId )
+        {
+            foreach( var randomizer in _randomizerList )
+            {
+                if( randomizer._id == aId )
+                {
+                    return randomizer;
+                }
+            }
+            return null;
+        }
 
         JSONNode GetPluginJsonFromSave()
         {
@@ -358,6 +490,7 @@ namespace HSTA
 
         protected ParamRandomizer _displayRandomizer;
         protected UIDynamicPopup _displayPopup; // any UI element, just to check if visible
+        protected JSONStorableBool _addAnimatable;
 
         List<ParamRandomizer> _randomizerList = new List<ParamRandomizer>();
         List<ParamRandomizer> _randomizerEnabledList = new List<ParamRandomizer>();
