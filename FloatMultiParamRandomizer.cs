@@ -43,6 +43,8 @@ namespace HSTA
                 _targetJson = new JSONStorableStringChooser("receiverTarget", null, null, "Target", SyncTargets);
                 _displayPopup = CreateScrollablePopup(_targetJson);
                 _displayPopup.popupPanelHeight = 820f;
+                // want to always resync the targets, since morphs can be marked animatable
+                _displayPopup.popup.onOpenPopupHandlers += SyncTargetChoices;
 
                 // set atom to current atom to initialize
                 _atomJSON.val = containingAtom.uid;
@@ -152,7 +154,7 @@ namespace HSTA
         {
             string defaultReceiver = "None";
             List<string> receiverChoices = new List<string>();
-            receiverChoices.Add("None");
+            receiverChoices.Add( defaultReceiver );
             if (atomUID != null)
             {
                 _atom = SuperController.singleton.GetAtomByUid(atomUID);
@@ -212,15 +214,25 @@ namespace HSTA
         // receiver JSONStorable
         protected void SyncReceiver(string receiverID)
         {
-            List<string> receiverTargetChoices = new List<string>();
+            List<string> targetChoices = new List<string>();
             foreach( ParamRandomizer randomizer in _randomizerList )
             {
                 DeregisterRandomizer(randomizer);
             }
+
+            Dictionary<string, ParamRandomizer> oldDict = null;
+
+            // If this is just refreshing the list we need to save existing randomizers
+            if( _skipUpdateVal )
+            {
+                oldDict = _randomizerDict;
+                _randomizerDict = new Dictionary<string, ParamRandomizer>();
+            }
             _randomizerDict.Clear();
             _randomizerList.Clear();
 
-            receiverTargetChoices.Add("None");
+            string defaultTarget = ( _targetJson?.val?.Length > 0 ? _targetJson.val : "None");
+            targetChoices.Add("None");
             if (_atom != null && receiverID != null)
             {
                 _receiver = _atom.GetStorableByID(receiverID);
@@ -228,14 +240,19 @@ namespace HSTA
                 {
                     foreach (string paramName in _receiver.GetFloatParamNames())
                     {
-                        ParamRandomizer randomizer = new ParamRandomizer(paramName, _receiver.GetFloatJSONParam(paramName));
+                        ParamRandomizer randomizer;
+                        // Use the old randomizer if it exists, otherwise make a new one
+                        if( !( oldDict != null && oldDict.TryGetValue(paramName, out randomizer) ) )
+                        {
+                            randomizer = new ParamRandomizer(paramName, _receiver.GetFloatJSONParam(paramName));
+                        }
                         RegisterRandomizer(randomizer);
                         _randomizerList.Add(randomizer);
                         _randomizerDict[paramName] = randomizer;
-                        receiverTargetChoices.Add(paramName);
+                        targetChoices.Add(paramName);
                     }
                 }
-                else if (receiverID != "None")
+                else if (receiverID != defaultTarget)
                 {
                     // some storables can be late loaded, like skin, clothing, hair, etc so must keep track of missing receiver
                     //SuperController.LogMessage("Missing receiver: " + receiverID);
@@ -247,13 +264,24 @@ namespace HSTA
                 _receiver = null;
             }
 
-            _targetJson.choices = receiverTargetChoices;
-            _targetJson.val = "None";
+            _targetJson.choices = targetChoices;
 
-            // Clear the display
-            ParamRandomizer.CopyValues(_displayRandomizer, new ParamRandomizer("display", null));
+            if (!_skipUpdateVal || !targetChoices.Contains(_receiverJSON.val))
+            {
+                _targetJson.val = defaultTarget;
+                // Clear the display
+                ParamRandomizer.CopyValues(_displayRandomizer, new ParamRandomizer("display", null));
+            }
 
             pluginLabelJSON.val = String.Format("{0}->{1} [{2}]", _atom.name, receiverID, pluginText);
+        }
+
+
+        protected void SyncTargetChoices()
+        {
+            _skipUpdateVal = true;
+            SyncReceiver( _receiver.name );
+            _skipUpdateVal = false;
         }
 
 
@@ -419,6 +447,9 @@ namespace HSTA
 
         public static void CopyValues( ParamRandomizer aDst, ParamRandomizer aSrc )
         {
+            bool prevDisable = aDst._disableHandlers;
+            aDst._disableHandlers = true;
+
             aDst._enabled.val = aSrc._enabled.val;
             CopyStorableFloat(aDst._period, aSrc._period);
             CopyStorableFloat(aDst._quickness, aSrc._quickness);
@@ -426,6 +457,8 @@ namespace HSTA
             CopyStorableFloat(aDst._maxVal, aSrc._maxVal);
             CopyStorableFloat(aDst._curVal, aSrc._curVal);
             CopyStorableFloat(aDst._targetVal, aSrc._targetVal);
+
+            aDst._disableHandlers = prevDisable;
         }
 
         public static void CopyStorableFloat( JSONStorableFloat aDst, JSONStorableFloat aSrc )
