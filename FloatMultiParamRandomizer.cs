@@ -15,11 +15,13 @@ namespace HSTA
     public class FloatMultiParamRandomizer : MVRScript
     {
         const string pluginText = "V1.0";
-        const string saveExt = "fpmr";
+        const string saveExt = "fmpr";
         public override void Init()
         {
             try
             {
+                _origFileFormat = SuperController.singleton.fileBrowserUI.fileFormat;
+
                 _displayRandomizer = new ParamRandomizer("display", null);
                 _displayRandomizer.UpdateEnabledListEvnt += UpdateEnabledList;
 
@@ -64,6 +66,8 @@ namespace HSTA
 
                 _addAnimatable = new JSONStorableBool("Auto-set 'animatable' on load", true);
                 CreateToggle(_addAnimatable);
+                _loadReceiver = new JSONStorableBool("Load 'receiver' on load", true);
+                CreateToggle(_loadReceiver);
 
                 btn = CreateButton("Save Preset");
                 btn.button.onClick.AddListener(() =>
@@ -72,6 +76,7 @@ namespace HSTA
 
                     browser.defaultPath = SuperController.singleton.savesDirResolved; ;
                     browser.SetTextEntry(true);
+                    browser.fileFormat = saveExt;
                     browser.Show(HandleSavePreset);
                     browser.fileEntryField.text = String.Format("{0}.{1}", ((int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds).ToString(), saveExt);
                     browser.ActivateFileNameField();
@@ -136,6 +141,7 @@ namespace HSTA
 
         void HandleSavePreset(string aPath)
         {
+            SuperController.singleton.fileBrowserUI.fileFormat = _origFileFormat;
             if (String.IsNullOrEmpty(aPath))
             {
                 return;
@@ -171,16 +177,25 @@ namespace HSTA
 
         void HandleLoadPreset( string aPath )
         {
+            SuperController.singleton.fileBrowserUI.fileFormat = _origFileFormat;
             if (String.IsNullOrEmpty(aPath))
             {
                 return;
             }
 
             var saveJson = this.LoadJSON(aPath);
+            string receiver;
+            if (_loadReceiver.val)
+            {
+                receiver = saveJson["receiver"].Value;
+            }
+            else
+            {
+                receiver = _receiverJSON.val;
+            }
             SyncAtom(_atom.name);
 
-            string receiver = saveJson["receiver"].Value;
-            SyncReceiver(receiver);
+            _receiverJSON.val = receiver; // sync receiver
 
             foreach ( JSONNode target in saveJson["targets"].AsArray )
             {
@@ -491,6 +506,8 @@ namespace HSTA
         protected ParamRandomizer _displayRandomizer;
         protected UIDynamicPopup _displayPopup; // any UI element, just to check if visible
         protected JSONStorableBool _addAnimatable;
+        protected JSONStorableBool _loadReceiver;
+        protected string _origFileFormat;
 
         List<ParamRandomizer> _randomizerList = new List<ParamRandomizer>();
         List<ParamRandomizer> _randomizerEnabledList = new List<ParamRandomizer>();
