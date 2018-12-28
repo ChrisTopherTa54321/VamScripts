@@ -656,9 +656,8 @@ namespace HSTA
 
         void onCurValChanged( float aVal )
         {
-            if(  _syncTarget?._target != null && !_syncTarget._enabled.val )
+            if(  !_disableHandlers && _syncTarget?._target != null && !_syncTarget._enabled.val )
             {
-                SuperController.LogMessage(aVal.ToString());
                 _syncTarget._target.val = aVal;
             }
         }
