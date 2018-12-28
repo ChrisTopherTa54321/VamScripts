@@ -14,7 +14,7 @@ namespace HSTA
     // includes random generation period, smoothing, and range selection options
     public class FloatMultiParamRandomizer : MVRScript
     {
-        const string pluginText = "V1.0.3";
+        const string pluginText = "V1.0.3+";
         const string saveExt = "fmpr";
         public override void Init()
         {
@@ -140,6 +140,90 @@ namespace HSTA
         }
 
 
+        JSONClass GetSaveJson()
+        {
+            JSONClass saveJson = new JSONClass();
+            saveJson["atom"] = _atom.name;
+            saveJson["receiver"] = _receiver.name;
+            saveJson["savedBy"] = pluginText;
+            saveJson["targets"] = new JSONArray();
+            foreach (var randomizer in _randomizerList)
+            {
+                JSONClass randomizerNode = new JSONClass();
+                saveJson["targets"].Add(randomizerNode);
+                randomizerNode["id"] = randomizer._id;
+                foreach (var storable in randomizer.GetStorableBools())
+                {
+                    storable.StoreJSON(randomizerNode);
+                }
+                foreach (var storable in randomizer.GetStorableFloats())
+                {
+                    storable.StoreJSON(randomizerNode);
+                }
+            }
+            return saveJson;
+        }
+
+
+        void LoadSaveJson(JSONNode aJson)
+        {
+            string receiver;
+            if (_loadReceiver.val)
+            {
+                receiver = aJson["receiver"].Value;
+            }
+            else
+            {
+                receiver = _receiverJSON.val;
+            }
+            SyncAtom(_atom.name);
+
+            _receiverJSON.val = receiver; // sync receiver
+
+            foreach (JSONNode target in aJson["targets"].AsArray)
+            {
+                string targetId = target["id"].Value;
+                var randomizer = GetRandomizerById(targetId);
+                if (randomizer != null)
+                {
+                    randomizer.RestoreFromJson(target);
+                }
+                else
+                {
+                    if (_addAnimatable.val && receiver == "geometry")
+                    {
+                        // Ensure target is animatable
+                        JSONStorable geometry = containingAtom.GetStorableByID("geometry");
+                        DAZCharacterSelector character = geometry as DAZCharacterSelector;
+                        GenerateDAZMorphsControlUI morphControl = character.morphsControlUI;
+                        DAZMorph morph = morphControl.GetMorphByDisplayName(targetId);
+                        if (morph != null)
+                        {
+                            morph.animatable = true;
+                            // Add the newly-animatable target to the list and try again
+                            SyncTargetChoices();
+                            randomizer = GetRandomizerById(targetId);
+                            if (null != randomizer)
+                            {
+                                randomizer.RestoreFromJson(target);
+                            }
+                        }
+                    }
+
+                    // Still no randomizer? Report the missing param
+                    if (randomizer == null)
+                    {
+                        SuperController.LogMessage("Failed to add randomizer for " + targetId);
+                    }
+
+                }
+            }
+
+            SyncTargetChoices();
+            SyncTargets(_targetJson.val);
+            UpdateEnabledList();
+        }
+
 
         void HandleSavePreset(string aPath)
         {
@@ -153,27 +237,7 @@ namespace HSTA
             {
                 aPath += "." + saveExt;
             }
-            JSONClass saveJson = new JSONClass();
-
-            saveJson["atom"] = _atom.name;
-            saveJson["receiver"] = _receiver.name;
-            saveJson["savedBy"] = pluginText;
-            saveJson["targets"] = new JSONArray();
-            foreach( var randomizer in _randomizerList )
-            {
-                JSONClass randomizerNode = new JSONClass();
-                saveJson["targets"].Add(randomizerNode);
-                randomizerNode["id"] = randomizer._id;
-                foreach ( var storable in randomizer.GetStorableBools() )
-                {
-                    storable.StoreJSON(randomizerNode);
-                }
-                foreach (var storable in randomizer.GetStorableFloats())
-                {
-                    storable.StoreJSON(randomizerNode);
-                }
-            }
-
+            JSONClass saveJson = GetSaveJson();
             this.SaveJSON(saveJson, aPath);
         }
 
@@ -185,62 +249,7 @@ namespace HSTA
                 return;
             }
 
-            var saveJson = this.LoadJSON(aPath);
-            string receiver;
-            if (_loadReceiver.val)
-            {
-                receiver = saveJson["receiver"].Value;
-            }
-            else
-            {
-                receiver = _receiverJSON.val;
-            }
-            SyncAtom(_atom.name);
-
-            _receiverJSON.val = receiver; // sync receiver
-
-            foreach ( JSONNode target in saveJson["targets"].AsArray )
-            {
-                string targetId = target["id"].Value;
-                var randomizer = GetRandomizerById(targetId);
-                if ( randomizer != null )
-                {
-                    randomizer.RestoreFromJson(target);
-                }
-                else
-                {
-                    if( _addAnimatable.val && receiver == "geometry" )
-                    {
-                        // Ensure target is animatable
-                        JSONStorable geometry = containingAtom.GetStorableByID("geometry");
-                        DAZCharacterSelector character = geometry as DAZCharacterSelector;
-                        GenerateDAZMorphsControlUI morphControl = character.morphsControlUI;
-                        DAZMorph morph = morphControl.GetMorphByDisplayName(targetId);
-                        if (morph != null)
-                        {
-                            morph.animatable = true;
-                            // Add the newly-animatable target to the list and try again
-                            SyncTargetChoices();
-                            randomizer = GetRandomizerById(targetId);
-                            if( null != randomizer )
-                            {
-                                randomizer.RestoreFromJson(target);
-                            }
-                        }
-                    }
-
-                    // Still no randomizer? Report the missing param
-                    if( randomizer == null )
-                    {
-                        SuperController.LogMessage("Failed to add randomizer for " + targetId);
-                    }
-
-                }
-            }
-
-            SyncTargetChoices();
-            SyncTargets(_targetJson.val);
-            UpdateEnabledList();
+            LoadSaveJson(this.LoadJSON(aPath));
         }
 
         void RestoreParamsFromSaveJson()
@@ -364,7 +373,7 @@ namespace HSTA
         protected void SyncReceiver(string receiverID)
         {
             List<string> targetChoices = new List<string>();
-            foreach( ParamRandomizer randomizer in _randomizerList )
+            foreach (ParamRandomizer randomizer in _randomizerList)
             {
                 DeregisterRandomizer(randomizer);
             }
@@ -372,19 +381,26 @@ namespace HSTA
             Dictionary<string, ParamRandomizer> oldDict = null;
 
             // If this is just refreshing the list we need to save existing randomizers
-            if( _skipUpdateVal )
+            string defaultTarget;
+            if (_skipUpdateVal)
             {
                 oldDict = _randomizerDict;
                 _randomizerDict = new Dictionary<string, ParamRandomizer>();
+                defaultTarget = _targetJson.val;
+            }
+            else
+            {
+                // Otherwise if the receiver changed then clear the enabled list
+                _randomizerEnabledList.Clear();
+                defaultTarget = "None";
             }
             _randomizerDict.Clear();
             _randomizerList.Clear();
-
-            string defaultTarget = ( _targetJson?.val?.Length > 0 ? _targetJson.val : "None");
+            
             targetChoices.Add("None");
             if (_atom != null && receiverID != null)
             {
-                if( !_skipUpdateVal )
+                if (!_skipUpdateVal)
                 {
                     _receiver = _atom.GetStorableByID(receiverID);
 
@@ -395,7 +411,7 @@ namespace HSTA
                     {
                         ParamRandomizer randomizer;
                         // Use the old randomizer if it exists, otherwise make a new one
-                        if( !( oldDict != null && oldDict.TryGetValue(paramName, out randomizer) ) )
+                        if (!(oldDict != null && oldDict.TryGetValue(paramName, out randomizer)))
                         {
                             randomizer = new ParamRandomizer(paramName, _receiver.GetFloatJSONParam(paramName));
                         }
@@ -418,7 +434,6 @@ namespace HSTA
             }
 
             _targetJson.choices = targetChoices;
-
             if (!_skipUpdateVal || !targetChoices.Contains(_receiverJSON.val))
             {
                 _targetJson.val = defaultTarget;
@@ -447,6 +462,10 @@ namespace HSTA
             {
                 // Sync the display randomizer with the actual randomizer
                 _displayRandomizer.SyncWith(randomizer);
+            }
+            else if( receiverTargetName == "None" )
+            {
+                _displayRandomizer.SyncWith(new ParamRandomizer("", null));
             }
         }
 
