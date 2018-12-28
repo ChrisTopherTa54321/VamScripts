@@ -14,7 +14,7 @@ namespace HSTA
     // includes random generation period, smoothing, and range selection options
     public class FloatMultiParamRandomizer : MVRScript
     {
-        const string pluginText = "V1.0.1";
+        const string pluginText = "V1.0.2";
         const string saveExt = "fmpr";
         public override void Init()
         {
@@ -541,7 +541,7 @@ namespace HSTA
             _maxVal = new JSONStorableFloat(prefix + "upperValue", 0f, onFloatChanged, 0f, 1f, false);
 
             _targetVal = new JSONStorableFloat("targetValue", 0f, 0f, 1f, false, false);
-            _curVal = new JSONStorableFloat("currentValue", 0f, 0f, 1f, false, false);
+            _curVal = new JSONStorableFloat("currentValue", 0f, onCurValChanged, 0f, 1f, false, true);
             if( null != _target)
             {
                 _minVal.min = _target.min;
@@ -651,6 +651,15 @@ namespace HSTA
             {
                 CopyValues(_syncTarget, this);
                 UpdateEnabledListEvnt.Invoke();
+            }
+        }
+
+        void onCurValChanged( float aVal )
+        {
+            if(  _syncTarget?._target != null && !_syncTarget._enabled.val )
+            {
+                SuperController.LogMessage(aVal.ToString());
+                _syncTarget._target.val = aVal;
             }
         }
 
