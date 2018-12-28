@@ -14,7 +14,7 @@ namespace HSTA
     // includes random generation period, smoothing, and range selection options
     public class FloatMultiParamRandomizer : MVRScript
     {
-        const string pluginText = "V1.0";
+        const string pluginText = "V1.0.1";
         const string saveExt = "fmpr";
         public override void Init()
         {
@@ -382,7 +382,11 @@ namespace HSTA
             targetChoices.Add("None");
             if (_atom != null && receiverID != null)
             {
-                _receiver = _atom.GetStorableByID(receiverID);
+                if( !_skipUpdateVal )
+                {
+                    _receiver = _atom.GetStorableByID(receiverID);
+
+                }
                 if (_receiver != null)
                 {
                     foreach (string paramName in _receiver.GetFloatParamNames())
