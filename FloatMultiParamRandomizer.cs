@@ -321,7 +321,7 @@ namespace HSTA
                     foreach (string receiverChoice in _atom.GetStorableIDs())
                     {
                         // Only add receiver if it has at least one float param
-                        if( _atom.GetStorableByID(receiverChoice).GetFloatParamNames().Count > 0 )
+                        if( _atom.GetStorableByID(receiverChoice)?.GetFloatParamNames()?.Count > 0 )
                         {
                             receiverChoices.Add(receiverChoice);
 
@@ -699,9 +699,10 @@ namespace HSTA
 
         void onCurValChanged( float aVal )
         {
-            if(  !_disableHandlers && _syncTarget?._target != null && !_syncTarget._enabled.val )
+            if (!_disableHandlers && _syncTarget?._target != null && !_syncTarget._enabled.val)
             {
                 _syncTarget._target.val = aVal;
+                CopyValues(_syncTarget, this);
             }
         }
 
