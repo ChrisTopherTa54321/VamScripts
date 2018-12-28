@@ -14,7 +14,7 @@ namespace HSTA
     // includes random generation period, smoothing, and range selection options
     public class FloatMultiParamRandomizer : MVRScript
     {
-        const string pluginText = "V1.0.2";
+        const string pluginText = "V1.0.3";
         const string saveExt = "fmpr";
         public override void Init()
         {
@@ -82,9 +82,12 @@ namespace HSTA
                     browser.ActivateFileNameField();
                 });
 
+
                 // Create sliders
                 CreateToggle(_displayRandomizer._enabled, true);
                 CreateSlider(_displayRandomizer._period, true);
+                CreateSlider(_displayRandomizer._periodRandomMin, true);
+                CreateSlider(_displayRandomizer._periodRandomMax, true);
                 CreateSlider(_displayRandomizer._quickness, true);
                 CreateSlider(_displayRandomizer._minVal, true);
                 CreateSlider(_displayRandomizer._maxVal, true);
@@ -123,12 +126,11 @@ namespace HSTA
                 foreach ( var randomizer in _randomizerEnabledList )
                 {
                     randomizer.Update(Time.deltaTime);
+                }
 
-                    // If this was the displayed randomizer then update the display values
-                    if( _displayPopup.isActiveAndEnabled && randomizer == _displayRandomizer._syncTarget )
-                    {
-                        ParamRandomizer.CopyValues(_displayRandomizer, randomizer);
-                    }
+                if( null != _displayRandomizer._syncTarget && _displayPopup.isActiveAndEnabled )
+                {
+                    ParamRandomizer.CopyValues(_displayRandomizer, _displayRandomizer._syncTarget);
                 }
             }
             catch (Exception e)
@@ -535,10 +537,12 @@ namespace HSTA
             }
 
             _enabled = new JSONStorableBool(prefix + "enabled", false, onEnabledChanged);
-            _period = new JSONStorableFloat(prefix + "period", 0.5f, onFloatChanged, 0f, 10f, false);
+            _period = new JSONStorableFloat(prefix + "period", 0.5f, onPeriodChanged, 0f, 10f, false);
+            _periodRandomMin = new JSONStorableFloat(prefix + "periodLowerValue", 0.0f, onFloatChanged, 0f, 10f, false);
+            _periodRandomMax = new JSONStorableFloat(prefix + "periodUpperValue", 0.0f, onFloatChanged, 0f, 10f, false);
             _quickness = new JSONStorableFloat(prefix + "quickness", 10f, onFloatChanged, 0f, 100f, true);
             _minVal = new JSONStorableFloat(prefix + "lowerValue", 0f, onFloatChanged, 0f, 1f, false);
-            _maxVal = new JSONStorableFloat(prefix + "upperValue", 0f, onFloatChanged, 0f, 1f, false);
+            _maxVal = new JSONStorableFloat(prefix + "upperValue", 1f, onFloatChanged, 0f, 1f, false);
 
             _targetVal = new JSONStorableFloat("targetValue", 0f, 0f, 1f, false, false);
             _curVal = new JSONStorableFloat("currentValue", 0f, onCurValChanged, 0f, 1f, false, true);
@@ -566,6 +570,8 @@ namespace HSTA
         {
             var storables = new List<JSONStorableFloat>();
             storables.Add(_period);
+            storables.Add(_periodRandomMin);
+            storables.Add(_periodRandomMax);
             storables.Add(_quickness);
             storables.Add(_minVal);
             storables.Add(_maxVal);
@@ -606,6 +612,8 @@ namespace HSTA
 
             aDst._enabled.val = aSrc._enabled.val;
             CopyStorableFloat(aDst._period, aSrc._period);
+            CopyStorableFloat(aDst._periodRandomMin, aSrc._periodRandomMin);
+            CopyStorableFloat(aDst._periodRandomMax, aSrc._periodRandomMax);
             CopyStorableFloat(aDst._quickness, aSrc._quickness);
             CopyStorableFloat(aDst._minVal, aSrc._minVal);
             CopyStorableFloat(aDst._maxVal, aSrc._maxVal);
@@ -632,6 +640,12 @@ namespace HSTA
             _timer -= aDeltaTime;
             if (_timer <= 0.0f )
             {
+                // Change period?
+                if (_periodRandomMin.val != _periodRandomMax.val)
+                {
+                    _period.valNoCallback = UnityEngine.Random.Range(_periodRandomMin.val, _periodRandomMax.val);
+                }
+
                 // reset timer and set a new random target value
                 _timer = _period.val;
                 _targetVal.val = UnityEngine.Random.Range(_minVal.val, _maxVal.val);
@@ -654,12 +668,32 @@ namespace HSTA
             }
         }
 
+
+        void onBoolChanged(bool aVal)
+        {
+            if (!_disableHandlers && _syncTarget != null)
+            {
+                CopyValues(_syncTarget, this);
+            }
+        }
+
+
         void onCurValChanged( float aVal )
         {
             if(  !_disableHandlers && _syncTarget?._target != null && !_syncTarget._enabled.val )
             {
                 _syncTarget._target.val = aVal;
             }
+        }
+
+        void onPeriodChanged( float aVal )
+        {
+            if( !_disableHandlers )
+            {
+                _periodRandomMax.val = aVal;
+                _periodRandomMin.val = aVal;
+            }
+            onFloatChanged(aVal);
         }
 
         void onFloatChanged( float aVal )
@@ -674,6 +708,8 @@ namespace HSTA
         public string _id;
         public JSONStorableBool _enabled;
         public JSONStorableFloat _period;
+        public JSONStorableFloat _periodRandomMin;
+        public JSONStorableFloat _periodRandomMax;
         public JSONStorableFloat _quickness;
         public JSONStorableFloat _minVal;
         public JSONStorableFloat _maxVal;
