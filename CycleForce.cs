@@ -16,6 +16,7 @@ namespace MVRPlugin {
 				ForceReceiver fr;
 				if (receiverNameToForceReceiver.TryGetValue(receiver, out fr)) {
 					RB = fr.GetComponent<Rigidbody>();
+					pluginLabelJSON.val = receiver;
 				} else {
 					RB = null;
 				}
