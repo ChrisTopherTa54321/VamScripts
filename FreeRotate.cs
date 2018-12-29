@@ -53,6 +53,8 @@ namespace HSTA
             
             bool btn1 = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, activeController);
             bool btn2 = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, activeController);
+            bool btn3 = OVRInput.Get(OVRInput.Button.One, activeController);
+            bool btn4 = OVRInput.Get(OVRInput.Button.Two, activeController);
             bool bothPressed = btn1 && btn2;
             bool thumbPressed = OVRInput.Get(OVRInput.Button.PrimaryThumbstick, activeController);
             float pitchVal = OVRInput.Get(OVRInput.Axis2D.PrimaryThumbstick, activeController).y;
@@ -150,10 +152,24 @@ namespace HSTA
             }
             else // Double clicked
             {
-                Vector3 rotation = SuperController.singleton.navigationRig.rotation.eulerAngles;
-                rotation.x = 0;
-                rotation.z = 0;
-                SuperController.singleton.navigationRig.rotation = Quaternion.Euler(rotation);
+                if( btn3 )
+                {
+                    if( SuperController.singleton.gameMode == SuperController.GameMode.Play )
+                    {
+                        SuperController.singleton.gameMode = SuperController.GameMode.Edit;
+                    }
+                    else
+                    {
+                        SuperController.singleton.gameMode = SuperController.GameMode.Play;
+                    }
+                }
+                else
+                {
+                    Vector3 rotation = SuperController.singleton.navigationRig.rotation.eulerAngles;
+                    rotation.x = 0;
+                    rotation.z = 0;
+                    SuperController.singleton.navigationRig.rotation = Quaternion.Euler(rotation);
+                }
                 didSomething = true;
             }
 
