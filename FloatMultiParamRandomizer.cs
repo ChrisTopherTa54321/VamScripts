@@ -83,7 +83,11 @@ namespace HSTA
                 });
 
 
-                // Create sliders
+                _updateRate = new JSONStorableFloat("update_rate_ms", 0.0f, 0.0f, 1000f, false);
+                RegisterFloat(_updateRate);
+                //CreateSlider(_updateRate);
+
+                // Create per-randomizer sliders
                 CreateToggle(_displayRandomizer._enabled, true);
                 CreateSlider(_displayRandomizer._period, true);
                 CreateSlider(_displayRandomizer._periodRandomMin, true);
@@ -114,28 +118,90 @@ namespace HSTA
                 RestoreParamsFromSaveJson();
             }
             UpdateEnabledList();
+            _coroutine = StartCoroutine(Update_Routine());
         }
 
-        protected void Update()
+        protected void OnDisable()
         {
-            try
+            StopRoutines();
+        }
+
+        protected void OnEnable()
+        {
+            StartRoutine();
+        }
+
+
+        private void StartRoutine()
+        {
+            if( null == _coroutine )
             {
-                // check for receivers that might have been missing on load due to asynchronous load of some assets like skin, clothing, hair
-                CheckMissingReceiver();
-
-                foreach ( var randomizer in _randomizerEnabledList )
-                {
-                    randomizer.Update(Time.deltaTime);
-                }
-
-                if( null != _displayRandomizer._syncTarget && _displayPopup.isActiveAndEnabled )
-                {
-                    ParamRandomizer.CopyValues(_displayRandomizer, _displayRandomizer._syncTarget);
-                }
+                _coroutine = StartCoroutine(Update_Routine());
             }
-            catch (Exception e)
+        }
+
+        private void StopRoutines()
+        {
+            if( null != _coroutine )
             {
-                SuperController.LogError("Exception caught: " + e);
+                StopCoroutine(_coroutine);
+                _coroutine = null;
+            }
+            if (null != _missingRecvCo)
+            {
+                StopCoroutine(_missingRecvCo);
+                _missingRecvCo = null;
+            }
+        }
+
+        protected void SetWaitForMissingReceiver(string aReceiver)
+        {
+            StopCoroutine(_missingRecvCo);
+            _missingReceiverStoreId = aReceiver;
+            _missingRecvCo = StartCoroutine(MissingReceiverCo());
+        }
+
+
+        protected IEnumerator MissingReceiverCo()
+        {
+            while( WaitingForMissingReceiver() )
+            {
+                yield return null;
+            }
+            yield break;
+        }
+
+        protected IEnumerator Update_Routine()
+        {
+            while( true )
+            {
+                float waitTime = _updateRate.val/1000;
+                if (waitTime > 0.0f )
+                {
+                    yield return new WaitForSecondsRealtime(waitTime);
+                }
+                else
+                {
+                    yield return new WaitForFixedUpdate();
+                    waitTime = Time.fixedUnscaledDeltaTime;
+                }
+
+                try
+                {
+                    foreach (var randomizer in _randomizerEnabledList)
+                    {
+                        randomizer.Update(waitTime);
+                    }
+
+                    if (null != _displayRandomizer._syncTarget && _displayPopup.isActiveAndEnabled)
+                    {
+                        ParamRandomizer.CopyValues(_displayRandomizer, _displayRandomizer._syncTarget);
+                    }
+                }
+                catch( Exception e )
+                {
+                    SuperController.LogError(e.ToString());
+                }
             }
         }
 
@@ -346,8 +412,10 @@ namespace HSTA
             }
         }
 
-        protected void CheckMissingReceiver()
+
+        protected bool WaitingForMissingReceiver()
         {
+            bool waiting = false;
             if (_missingReceiverStoreId != "" && _atom != null)
             {
                 JSONStorable missingReceiver = _atom.GetStorableByID(_missingReceiverStoreId);
@@ -359,7 +427,9 @@ namespace HSTA
                     UpdateEnabledList();
                     _missingReceiverStoreId = "";
                 }
+                waiting = true;
             }
+            return waiting;
         }
 
         protected void SyncReceiverChoices()
@@ -425,7 +495,7 @@ namespace HSTA
                 {
                     // some storables can be late loaded, like skin, clothing, hair, etc so must keep track of missing receiver
                     //SuperController.LogMessage("Missing receiver: " + receiverID);
-                    _missingReceiverStoreId = receiverID;
+                    SetWaitForMissingReceiver(receiverID);
                 }
             }
             else
@@ -528,6 +598,9 @@ namespace HSTA
 
         protected string _missingReceiverStoreId = "";
 
+        protected Coroutine _coroutine = null;
+        protected Coroutine _missingRecvCo = null;
+        protected JSONStorableFloat _updateRate;
         protected ParamRandomizer _displayRandomizer;
         protected UIDynamicPopup _displayPopup; // any UI element, just to check if visible
         protected JSONStorableBool _addAnimatable;
@@ -656,17 +729,14 @@ namespace HSTA
                 return;
             }
 
-            _timer -= aDeltaTime;
-            if (_timer <= 0.0f )
+            _timer += aDeltaTime;
+            if (_timer > _targetTime )
             {
                 // Change period?
-                if (_periodRandomMin.val != _periodRandomMax.val)
-                {
-                    _period.valNoCallback = UnityEngine.Random.Range(_periodRandomMin.val, _periodRandomMax.val);
-                }
+                _period.valNoCallback = UnityEngine.Random.Range(_periodRandomMin.val, _periodRandomMax.val);
 
                 // reset timer and set a new random target value
-                _timer = _period.val;
+                _targetTime += _period.val;
                 _targetVal.val = UnityEngine.Random.Range(_minVal.val, _maxVal.val);
             }
             _curVal.val = Mathf.Lerp(_curVal.val, _targetVal.val, aDeltaTime * _quickness.val);
@@ -713,6 +783,7 @@ namespace HSTA
                 _periodRandomMax.val = aVal;
                 _periodRandomMin.val = aVal;
             }
+            _targetTime = _timer + _period.val;
             onFloatChanged(aVal);
         }
 
@@ -745,6 +816,7 @@ namespace HSTA
         private bool _disableHandlers = false;
 
         float _timer;
+        float _targetTime;
     }
 
 }
