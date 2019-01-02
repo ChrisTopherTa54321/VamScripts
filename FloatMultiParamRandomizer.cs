@@ -14,7 +14,7 @@ namespace HSTA
     // includes random generation period, smoothing, and range selection options
     public class FloatMultiParamRandomizer : MVRScript
     {
-        const string pluginText = "V1.0.3+";
+        const string pluginText = "V1.0.4";
         const string saveExt = "fmpr";
         public override void Init()
         {
@@ -631,7 +631,7 @@ namespace HSTA
             _enabled = new JSONStorableBool(prefix + "enabled", false, onEnabledChanged);
             _period = new JSONStorableFloat(prefix + "period", 0.5f, onPeriodChanged, 0f, 10f, false);
             _periodRandomMin = new JSONStorableFloat(prefix + "periodLowerValue", 0.0f, onFloatChanged, 0f, 10f, false);
-            _periodRandomMax = new JSONStorableFloat(prefix + "periodUpperValue", 0.0f, onFloatChanged, 0f, 10f, false);
+            _periodRandomMax = new JSONStorableFloat(prefix + "periodUpperValue", 2.0f, onFloatChanged, 0f, 10f, false);
             _quickness = new JSONStorableFloat(prefix + "quickness", 10f, onFloatChanged, 0f, 100f, true);
             _minVal = new JSONStorableFloat(prefix + "lowerValue", 0f, onFloatChanged, 0f, 1f, false);
             _maxVal = new JSONStorableFloat(prefix + "upperValue", 1f, onFloatChanged, 0f, 1f, false);
@@ -722,6 +722,7 @@ namespace HSTA
             aDst.val = aSrc.val;
         }
 
+        const float lerping_thresh = .001f;
         public void Update(float aDeltaTime)
         {
             if( !_enabled.val )
@@ -737,14 +738,30 @@ namespace HSTA
 
                 // reset timer and set a new random target value
                 _targetTime += _period.val;
-                _targetVal.val = UnityEngine.Random.Range(_minVal.val, _maxVal.val);
-            }
-            _curVal.val = Mathf.Lerp(_curVal.val, _targetVal.val, aDeltaTime * _quickness.val);
 
-            if( _target != null )
-            {
-                _target.val = _curVal.val;
+                // Start the lerping
+                _targetVal.val = UnityEngine.Random.Range(_minVal.val, _maxVal.val);
+                _lerping = true;
+                SuperController.LogMessage("Start Lerping");
             }
+
+
+            if( _lerping )
+            {
+                _curVal.val = Mathf.Lerp(_curVal.val, _targetVal.val, aDeltaTime * _quickness.val);
+                if (_target != null)
+                {
+                    _target.val = _curVal.val;
+                }
+
+                SuperController.LogMessage( String.Format( "{0} < {1}", Math.Abs(_curVal.val - _targetVal.val), lerping_thresh));
+                if (Math.Abs(_curVal.val - _targetVal.val) < lerping_thresh)
+                {
+                    _lerping = false;
+                    SuperController.LogMessage("Done Lerping");
+                }
+            }
+
         }
 
 
@@ -769,7 +786,7 @@ namespace HSTA
 
         void onCurValChanged( float aVal )
         {
-            if (!_disableHandlers && _syncTarget?._target != null && !_syncTarget._enabled.val)
+            if (!_disableHandlers && _syncTarget?._target != null && (!_syncTarget._enabled.val || !_lerping ) )
             {
                 _syncTarget._target.val = aVal;
                 CopyValues(_syncTarget, this);
@@ -817,6 +834,7 @@ namespace HSTA
 
         float _timer;
         float _targetTime;
+        bool _lerping = false;
     }
 
 }
