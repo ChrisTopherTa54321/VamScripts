@@ -14,7 +14,7 @@ namespace HSTA
     // includes random generation period, smoothing, and range selection options
     public class FloatMultiParamRandomizer : MVRScript
     {
-        const string pluginText = "V1.0.4";
+        const string pluginText = "V1.0.4+";
         const string saveExt = "fmpr";
         public override void Init()
         {
@@ -53,12 +53,17 @@ namespace HSTA
                 _atomJSON.val = containingAtom.uid;
 
 
+                if( String.IsNullOrEmpty( _lastBrowseDir ) )
+                {
+                    _lastBrowseDir = SuperController.singleton.mediaFileBrowserUI.defaultPath;
+                }
+
                 var btn = CreateButton("Load Preset");
                 btn.button.onClick.AddListener(() =>
                 {
                     uFileBrowser.FileBrowser browser = SuperController.singleton.fileBrowserUI;
 
-                    browser.defaultPath = SuperController.singleton.savesDirResolved;;
+                    browser.defaultPath = _lastBrowseDir;
                     browser.SetTextEntry(false);
                     browser.fileFormat = saveExt;
                     browser.Show(HandleLoadPreset);
@@ -74,7 +79,7 @@ namespace HSTA
                 {
                     uFileBrowser.FileBrowser browser = SuperController.singleton.fileBrowserUI;
 
-                    browser.defaultPath = SuperController.singleton.savesDirResolved; ;
+                    browser.defaultPath = _lastBrowseDir;
                     browser.SetTextEntry(true);
                     browser.fileFormat = saveExt;
                     browser.Show(HandleSavePreset);
@@ -298,8 +303,9 @@ namespace HSTA
             {
                 return;
             }
+            _lastBrowseDir = aPath;
 
-            if( !aPath.ToLower().EndsWith(saveExt.ToLower()))
+            if ( !aPath.ToLower().EndsWith(saveExt.ToLower()))
             {
                 aPath += "." + saveExt;
             }
@@ -314,6 +320,7 @@ namespace HSTA
             {
                 return;
             }
+            _lastBrowseDir = aPath;
 
             LoadSaveJson(this.LoadJSON(aPath));
         }
@@ -606,6 +613,7 @@ namespace HSTA
         protected JSONStorableBool _addAnimatable;
         protected JSONStorableBool _loadReceiver;
         protected string _origFileFormat;
+        protected string _lastBrowseDir;
 
         List<ParamRandomizer> _randomizerList = new List<ParamRandomizer>();
         List<ParamRandomizer> _randomizerEnabledList = new List<ParamRandomizer>();
