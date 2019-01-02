@@ -711,23 +711,31 @@ namespace HSTA
             aDst._disableHandlers = true;
 
             aDst._enabled.val = aSrc._enabled.val;
-            CopyStorableFloat(aDst._period, aSrc._period);
-            CopyStorableFloat(aDst._periodRandomMin, aSrc._periodRandomMin);
-            CopyStorableFloat(aDst._periodRandomMax, aSrc._periodRandomMax);
-            CopyStorableFloat(aDst._quickness, aSrc._quickness);
-            CopyStorableFloat(aDst._minVal, aSrc._minVal);
-            CopyStorableFloat(aDst._maxVal, aSrc._maxVal);
-            CopyStorableFloat(aDst._curVal, aSrc._curVal);
-            CopyStorableFloat(aDst._targetVal, aSrc._targetVal);
+            CopyStorableFloat(aDst._period, aSrc._period, aDst._disableHandlers);
+            CopyStorableFloat(aDst._periodRandomMin, aSrc._periodRandomMin, aDst._disableHandlers);
+            CopyStorableFloat(aDst._periodRandomMax, aSrc._periodRandomMax, aDst._disableHandlers);
+            CopyStorableFloat(aDst._quickness, aSrc._quickness, aDst._disableHandlers);
+            CopyStorableFloat(aDst._minVal, aSrc._minVal, aDst._disableHandlers );
+            CopyStorableFloat(aDst._maxVal, aSrc._maxVal, aDst._disableHandlers);
+            CopyStorableFloat(aDst._curVal, aSrc._curVal, aDst._disableHandlers);
+            CopyStorableFloat(aDst._targetVal, aSrc._targetVal, aDst._disableHandlers);
 
             aDst._disableHandlers = prevDisable;
         }
 
-        public static void CopyStorableFloat( JSONStorableFloat aDst, JSONStorableFloat aSrc )
+        public static void CopyStorableFloat( JSONStorableFloat aDst, JSONStorableFloat aSrc, bool aDisableHandlers = false )
         {
             aDst.max = aSrc.max;
             aDst.min = aSrc.min;
-            aDst.val = aSrc.val;
+
+            if (aDisableHandlers)
+            {
+                aDst.valNoCallback = aSrc.val;
+            }
+            else
+            {
+                aDst.val = aSrc.val;
+            }
         }
 
         const float lerping_thresh = .001f;
