@@ -83,7 +83,7 @@ namespace HSTA
                 });
 
 
-                _updateRate = new JSONStorableFloat("update_rate_ms", 0.0f, 0.0f, 1000f, false);
+                _updateRate = new JSONStorableFloat("update_rate_ms", 15.0f, 0.0f, 1000f, false);
                 RegisterFloat(_updateRate);
                 //CreateSlider(_updateRate);
 
@@ -742,7 +742,6 @@ namespace HSTA
                 // Start the lerping
                 _targetVal.val = UnityEngine.Random.Range(_minVal.val, _maxVal.val);
                 _lerping = true;
-                SuperController.LogMessage("Start Lerping");
             }
 
 
@@ -754,11 +753,9 @@ namespace HSTA
                     _target.val = _curVal.val;
                 }
 
-                SuperController.LogMessage( String.Format( "{0} < {1}", Math.Abs(_curVal.val - _targetVal.val), lerping_thresh));
                 if (Math.Abs(_curVal.val - _targetVal.val) < lerping_thresh)
                 {
                     _lerping = false;
-                    SuperController.LogMessage("Done Lerping");
                 }
             }
 
