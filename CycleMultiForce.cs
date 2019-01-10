@@ -4,7 +4,11 @@ using System.Collections;
 using System.Collections.Generic;
 using SimpleJSON;
 
-namespace MVRPlugin
+// original CycleForce by MeshedVr
+// Multi-angle mod by physis
+// Minor tweaks by hsthrowaway5
+
+namespace HSTA
 {
 
     // this class is a bit like the built-in CycleForceProducer but can only attach to rigidbodies within the containing atom
@@ -21,6 +25,7 @@ namespace MVRPlugin
                 if (receiverNameToForceReceiver.TryGetValue(receiver, out fr))
                 {
                     RB = fr.GetComponent<Rigidbody>();
+                    pluginLabelJSON.val = receiver;
                 }
                 else
                 {
@@ -33,37 +38,6 @@ namespace MVRPlugin
             }
         }
         protected JSONStorableStringChooser receiverChoiceJSON;
-
-        protected ForceProducerV2.AxisName _forceAxis = ForceProducerV2.AxisName.Z;
-        protected void SyncForceAxis(string axisName)
-        {
-            try
-            {
-                ForceProducerV2.AxisName an = (ForceProducerV2.AxisName)System.Enum.Parse(typeof(ForceProducerV2.AxisName), axisName);
-                _forceAxis = an;
-            }
-            catch (System.ArgumentException)
-            {
-                Debug.LogError("Attempt to set axis to " + axisName + " which is not a valid axis name");
-            }
-        }
-        protected JSONStorableStringChooser forceAxisJSON;
-
-
-        protected ForceProducerV2.AxisName _torqueAxis = ForceProducerV2.AxisName.X;
-        protected void SyncTorqueAxis(string axisName)
-        {
-            try
-            {
-                ForceProducerV2.AxisName an = (ForceProducerV2.AxisName)System.Enum.Parse(typeof(ForceProducerV2.AxisName), axisName);
-                _torqueAxis = an;
-            }
-            catch (System.ArgumentException)
-            {
-                Debug.LogError("Attempt to set axis to " + axisName + " which is not a valid axis name");
-            }
-        }
-        protected JSONStorableStringChooser torqueAxisJSON;
 
         protected JSONStorableFloat periodJSON;
         protected JSONStorableFloat periodRatioJSON;
@@ -103,18 +77,6 @@ namespace MVRPlugin
                 dp.popupPanelHeight = 1100f;
                 dp.popup.alwaysOpen = true;
 
-                string[] axisChoices = System.Enum.GetNames(typeof(ForceProducerV2.AxisName));
-                List<string> axisChoicesList = new List<string>(axisChoices);
-
-                //forceAxisJSON = new JSONStorableStringChooser("forceAxis", axisChoicesList, _forceAxis.ToString(), "Force Axis", SyncForceAxis);
-                //forceAxisJSON.storeType = JSONStorableParam.StoreType.Full;
-                //RegisterStringChooser(forceAxisJSON);
-                //CreatePopup(forceAxisJSON,true);
-
-                //torqueAxisJSON = new JSONStorableStringChooser("torqueAxis", axisChoicesList, _torqueAxis.ToString(), "Torque Axis", SyncTorqueAxis);
-                //torqueAxisJSON.storeType = JSONStorableParam.StoreType.Full;
-                //RegisterStringChooser(torqueAxisJSON);
-                //CreatePopup(torqueAxisJSON,true);
                 forceDirectionXJSON = new JSONStorableFloat("Force direction X", 0f, -1f, 1f, false, true);
                 forceDirectionXJSON.storeType = JSONStorableParam.StoreType.Full;
                 RegisterFloat(forceDirectionXJSON);
@@ -208,42 +170,6 @@ namespace MVRPlugin
             flip = 1f;
         }
 
-        protected virtual Vector3 AxisToVector(ForceProducerV2.AxisName axis)
-        {
-            Vector3 result;
-            result.x = 1;
-            result.y = 0;
-            result.z = 0;
-            //if (RB != null) {
-            //	switch (axis) {
-            //		case ForceProducerV2.AxisName.X:
-            //			result = RB.transform.right;
-            //			break;
-            //		case ForceProducerV2.AxisName.NegX:
-            //			result = -RB.transform.right;
-            //			break;
-            //		case ForceProducerV2.AxisName.Y:
-            //			result = RB.transform.up;
-            //			break;
-            //		case ForceProducerV2.AxisName.NegY:
-            //			result = -RB.transform.up;
-            //			break;
-            //		case ForceProducerV2.AxisName.Z:
-            //			result = RB.transform.forward;
-            //			break;
-            //		case ForceProducerV2.AxisName.NegZ:
-            //			result = -RB.transform.forward;
-            //			break;
-            //		default:
-            //			result = Vector3.zero;
-            //			break;
-            //	}
-            //} else {
-            //	result = Vector3.zero;
-            //}
-            return (result);
-        }
-
         protected void SetTargets(float percent)
         {
             Vector3 forceDirection;
@@ -256,8 +182,6 @@ namespace MVRPlugin
             torqueDirection.y = torqueDirectionYJSON.val;
             torqueDirection.z = torqueDirectionZJSON.val;
 
-            //targetForce = AxisToVector(_forceAxis) * percent * forceFactorJSON.val;
-            //targetTorque = AxisToVector(_torqueAxis) * percent * torqueFactorJSON.val;
             targetForce = forceDirection * percent * forceFactorJSON.val;
             targetTorque = torqueDirection * percent * torqueFactorJSON.val;
         }
