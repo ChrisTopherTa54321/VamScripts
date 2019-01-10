@@ -763,7 +763,7 @@ namespace HSTA
 
             if( _lerping )
             {
-                _curVal.val = Mathf.Lerp(_curVal.val, _targetVal.val, aDeltaTime * _quickness.val);
+                _curVal.valNoCallback = Mathf.Lerp(_curVal.val, _targetVal.val, aDeltaTime * _quickness.val);
                 if (_target != null)
                 {
                     _target.val = _curVal.val;
@@ -771,6 +771,7 @@ namespace HSTA
 
                 if (Math.Abs(_curVal.val - _targetVal.val) < lerping_thresh)
                 {
+                    _curVal.valNoCallback = _targetVal.val;
                     _lerping = false;
                 }
             }
