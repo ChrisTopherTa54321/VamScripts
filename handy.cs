@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using SimpleJSON;
 
 namespace DillDoe {
-	public class Handy : MVRScript {
+    public class Handy : MVRScript {
 
         #region PluginInfo    
         public string pluginAuthor = "DillDoe";
@@ -16,9 +16,9 @@ namespace DillDoe {
         You are free to edit/change everything below this, please do not delete the PluginInfo. 
         Append it if you modify the script
 
-		01/13/2019 - updated open/close toggle option to remove delay.  added slider option
+        01/13/2019 - updated open/close toggle option to remove delay.  added slider option
         01/13/2019 - HsThrowAway5 - Oculus support
-		";
+        ";
 
         #endregion
 
@@ -35,7 +35,7 @@ namespace DillDoe {
         #endregion
 
         public override void Init() {
-			try {
+            try {
                 //SuperController.LogMessage("");
 
                 // get controllers
@@ -108,10 +108,10 @@ namespace DillDoe {
                 Lslider = CreateSlider(Rval);
 
             }
-			catch (Exception e) {
-				SuperController.LogError("Exception caught: " + e);
-			}
-		}
+            catch (Exception e) {
+                SuperController.LogError("Exception caught: " + e);
+            }
+        }
 
         void Start()
         {
@@ -123,8 +123,8 @@ namespace DillDoe {
             }
         }
 
-		// Update is called with each rendered frame by Unity
-		void Update() {
+        // Update is called with each rendered frame by Unity
+        void Update() {
             try
             {
                 if (LC != null && hL != null ) {
@@ -147,10 +147,10 @@ namespace DillDoe {
                     }
                 }
             }
-			catch (Exception e) {
-				SuperController.LogError("Exception caught: " + e);
-			}
-		}
+            catch (Exception e) {
+                SuperController.LogError("Exception caught: " + e);
+            }
+        }
 
         #region HandToggles
         //  toggle close/open hands
@@ -159,10 +159,10 @@ namespace DillDoe {
             if (hL != null)
             {
                 if (e == true)
-				{ hL.Play(animName, 0, 1f); }
+                { hL.Play(animName, 0, 1f); }
                 else
                 { hL.Play(animName, 0, 0); }
-				hL.speed = 0;
+                hL.speed = 0;
             }
         }
 
@@ -174,7 +174,7 @@ namespace DillDoe {
                 { hR.Play(animName, 0, 1f); }
                 else
                 { hR.Play(animName, 0, 0); }
-				hR.speed = 0;
+                hR.speed = 0;
             }
         }
 
