@@ -4,20 +4,22 @@ using System.Collections;
 using System.Collections.Generic;
 using SimpleJSON;
 
-// Original handy.cs by DillDoe
-// Oculus modifications by HsThrowaway5
-
 namespace DillDoe {
-	public class Handy_Oculus : MVRScript {
+	public class Handy : MVRScript {
 
         #region PluginInfo    
         public string pluginAuthor = "DillDoe";
         public string pluginName = "Handy";
-        public string pluginVersion = "1.0+OVR";
+        public string pluginVersion = "1.1+OVR";
         public string pluginDate = "01/11" + "/2019";
         public string pluginDescription = @"This plugin plays animation for handy asset when the trigger is pressed.
         You are free to edit/change everything below this, please do not delete the PluginInfo. 
-        Append it if you modify the script";
+        Append it if you modify the script
+
+		01/13/2019 - updated open/close toggle option to remove delay.  added slider option
+        01/13/2019 - HsThrowAway5 - Oculus support
+		";
+
         #endregion
 
         #region Vars
@@ -27,8 +29,11 @@ namespace DillDoe {
         protected VrController RC;
         protected JSONStorableBool _swapTriggers;
         protected const string animName = "newHands";
+
+        protected UIDynamicSlider Lslider;
+        protected UIDynamicSlider Rslider;
         #endregion
-    
+
         public override void Init() {
 			try {
                 //SuperController.LogMessage("");
@@ -90,9 +95,17 @@ namespace DillDoe {
                 RegisterBool(hlClose);
                 CreateToggle(hlClose);
 
+                JSONStorableFloat Lval = new JSONStorableFloat("left hand", 0f, LhandVal, 0f, 1f, true);
+                RegisterFloat(Lval);
+                Lslider = CreateSlider(Lval);
+
                 JSONStorableBool hrClose = new JSONStorableBool("close right hand", false, closeHR);
                 RegisterBool(hrClose);
                 CreateToggle(hrClose);
+
+                JSONStorableFloat Rval = new JSONStorableFloat("right hand", 0f, RhandVal, 0f, 1f, true);
+                RegisterFloat(Rval);
+                Lslider = CreateSlider(Rval);
 
             }
 			catch (Exception e) {
@@ -146,14 +159,10 @@ namespace DillDoe {
             if (hL != null)
             {
                 if (e == true)
-                {                    
-                    hL.Play(animName, 0, 1f);
-                    hL.speed=0;
-                }
+				{ hL.Play(animName, 0, 1f); }
                 else
-                {
-                    hL.speed = 1;
-                }
+                { hL.Play(animName, 0, 0); }
+				hL.speed = 0;
             }
         }
 
@@ -162,14 +171,28 @@ namespace DillDoe {
             if (hR != null)
             {
                 if (e == true)
-                {
-                    hR.Play(animName, 0, 1f);
-                    hR.speed = 0;
-                }
+                { hR.Play(animName, 0, 1f); }
                 else
-                {
-                    hR.speed = 1;
-                }
+                { hR.Play(animName, 0, 0); }
+				hR.speed = 0;
+            }
+        }
+
+        protected void LhandVal(JSONStorableFloat lh)
+        {
+            if (hL != null)
+            {
+                hL.Play(animName, 0, lh.val);
+                hL.speed = 0;
+            }
+        }
+
+        protected void RhandVal(JSONStorableFloat rh)
+        {
+            if (hR != null)
+            {
+                hR.Play(animName, 0, rh.val);
+                hR.speed = 0;
             }
         }
         #endregion
