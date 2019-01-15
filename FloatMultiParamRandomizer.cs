@@ -15,7 +15,7 @@ namespace HSTA
     public class FloatMultiParamRandomizer : MVRScript
     {
         const string pluginName = "FloatMultiParamRandomizer";
-        const string pluginVersion = "V1.0.4+";
+        const string pluginVersion = "V1.0.5";
         const string saveExt = "fmpr";
         public override void Init()
         {
