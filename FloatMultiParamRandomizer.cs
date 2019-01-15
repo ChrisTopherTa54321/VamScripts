@@ -14,7 +14,8 @@ namespace HSTA
     // includes random generation period, smoothing, and range selection options
     public class FloatMultiParamRandomizer : MVRScript
     {
-        const string pluginText = "V1.0.4+";
+        const string pluginName = "FloatMultiParamRandomizer";
+        const string pluginVersion = "V1.0.4+";
         const string saveExt = "fmpr";
         public override void Init()
         {
@@ -33,6 +34,7 @@ namespace HSTA
                 _displayPopup.popupPanelHeight = 1100f;
                 // want to always resync the atom choices on opening popup since atoms can be added/removed
                 _displayPopup.popup.onOpenPopupHandlers += SyncAtomChoices;
+                _displayPopup.label = "Atom in Scene";
 
                 // make receiver selector
                 _receiverJSON = new JSONStorableStringChooser("receiver", null, null, "Receiver", SyncReceiver);
@@ -41,6 +43,7 @@ namespace HSTA
                 _displayPopup.popupPanelHeight = 960f;
                 // want to always resync the receivers, since plugins can be added/removed
                 _displayPopup.popup.onOpenPopupHandlers += SyncReceiverChoices;
+                _displayPopup.label = "Receiver on Atom";
 
                 // make receiver target selector
                 _targetJson = new JSONStorableStringChooser("receiverTarget", null, null, "Target", SyncTargets);
@@ -48,16 +51,9 @@ namespace HSTA
                 _displayPopup.popupPanelHeight = 820f;
                 // want to always resync the targets, since morphs can be marked animatable
                 _displayPopup.popup.onOpenPopupHandlers += SyncTargetChoices;
+                _displayPopup.label = "Parameter on Receiver";
 
-                // set atom to current atom to initialize
-                _atomJSON.val = containingAtom.uid;
-
-
-                if( String.IsNullOrEmpty( _lastBrowseDir ) )
-                {
-                    _lastBrowseDir = SuperController.singleton.mediaFileBrowserUI.defaultPath;
-                }
-
+                // Add Load/Save buttons
                 var btn = CreateButton("Load Preset");
                 btn.button.onClick.AddListener(() =>
                 {
@@ -69,9 +65,11 @@ namespace HSTA
                     browser.Show(HandleLoadPreset);
                 });
 
-                _addAnimatable = new JSONStorableBool("Auto-set 'animatable' on load", true);
-                CreateToggle(_addAnimatable);
-                _loadReceiver = new JSONStorableBool("Load 'receiver' on load", true);
+
+                _addAnimatable = new JSONStorableBool("autoSetAnimatable", true);
+                var toggle = CreateToggle(_addAnimatable);
+                toggle.label = "Auto-set 'animatable' on load";
+                _loadReceiver = new JSONStorableBool("Set 'receiver' on load", true);
                 CreateToggle(_loadReceiver);
 
                 btn = CreateButton("Save Preset");
@@ -88,27 +86,71 @@ namespace HSTA
                 });
 
 
-                _updateRate = new JSONStorableFloat("update_rate_ms", 15.0f, 0.0f, 1000f, false);
-                RegisterFloat(_updateRate);
-                //CreateSlider(_updateRate);
+                // set atom to current atom to initialize
+                _atomJSON.val = containingAtom.uid;
+
+                if( String.IsNullOrEmpty( _lastBrowseDir ) )
+                {
+                    _lastBrowseDir = SuperController.singleton.mediaFileBrowserUI.defaultPath;
+                }
 
                 // Create per-randomizer sliders
-                CreateToggle(_displayRandomizer._enabled, true);
-                CreateSlider(_displayRandomizer._period, true);
-                CreateSlider(_displayRandomizer._periodRandomMin, true);
-                CreateSlider(_displayRandomizer._periodRandomMax, true);
-                CreateSlider(_displayRandomizer._quickness, true);
-                CreateSlider(_displayRandomizer._minVal, true);
-                CreateSlider(_displayRandomizer._maxVal, true);
-                CreateSlider(_displayRandomizer._percentage, true);
+                var spacer = CreateSpacer();
+                spacer.height = 40;
 
-                UIDynamicSlider slider = CreateSlider(_displayRandomizer._targetVal, true);
+                var slider = CreateSlider(_displayRandomizer._period, true);
+                slider.label = "Period\nSec between updates";
+
+                slider = CreateSlider(_displayRandomizer._periodRandomMin, true);
+                slider.label = "Period min val";
+
+                slider = CreateSlider(_displayRandomizer._periodRandomMax, true);
+                slider.label = "Period max val";
+
+                slider = CreateSlider(_displayRandomizer._quickness, true);
+                slider.label = "Quickness\nTransition time in sec";
+
+                slider = CreateSlider(_displayRandomizer._minVal, true);
+                slider.label = "Random range min val";
+
+                slider = CreateSlider(_displayRandomizer._maxVal, true);
+                slider.label = "Random range max val";
+
+                slider = CreateSlider(_displayRandomizer._percentage, true);
+                slider.label = "Max target val change %";
+
+                slider = CreateSlider(_displayRandomizer._targetVal, true);
+                slider.label = "Target Value";
                 slider.defaultButtonEnabled = false;
                 slider.quickButtonsEnabled = false;
 
                 slider = CreateSlider(_displayRandomizer._curVal, true);
+                slider.label = "Current value\nYou can slide manually";
                 slider.defaultButtonEnabled = false;
                 slider.quickButtonsEnabled = false;
+
+                var countLabel = CreateTextField(new JSONStorableString("", ""));
+                JSONStorableFloat.SetFloatCallback callback = (float aVal) =>
+                {
+                    countLabel.text = pluginName + " " + pluginVersion + "\n"
+                                    + "\n"
+                                    + "Active randomizers: " + aVal.ToString() + "\n"
+                                    + "\n"
+                                    + "Update delay of 0 updates every frame."
+                                    ;
+                };
+                _activeRandomizersJson = new JSONStorableFloat("activeRandomizers", -1.0f, callback, 0.0f, 0.0f, false, false);
+                _activeRandomizersJson.val = 0.0f;
+
+                _updateRate = new JSONStorableFloat("update_rate_ms", 15.0f, 0.0f, 1000f, false);
+                RegisterFloat(_updateRate);
+                 slider = CreateSlider(_updateRate);
+                slider.label = "Update Delay (ms)";
+
+                spacer = CreateSpacer();
+                spacer.height = 120;
+                toggle = CreateToggle(_displayRandomizer._enabled);
+                toggle.label = "Enable Randomizer";
             }
             catch (Exception e)
             {
@@ -217,7 +259,7 @@ namespace HSTA
             JSONClass saveJson = new JSONClass();
             saveJson["atom"] = _atom.name;
             saveJson["receiver"] = _receiver.name;
-            saveJson["savedBy"] = pluginText;
+            saveJson["savedBy"] = pluginVersion;
             saveJson["targets"] = new JSONArray();
             foreach (var randomizer in _randomizerList)
             {
@@ -519,7 +561,7 @@ namespace HSTA
                 ParamRandomizer.CopyValues(_displayRandomizer, new ParamRandomizer("display", null));
             }
 
-            pluginLabelJSON.val = String.Format("{0}->{1} [{2}]", _atom.name, receiverID, pluginText);
+            pluginLabelJSON.val = String.Format("{0}->{1} [{2}]", _atom.name, receiverID, pluginVersion);
         }
 
 
@@ -557,6 +599,7 @@ namespace HSTA
                     _randomizerEnabledList.Add(randomizer);
                 }
             }
+            _activeRandomizersJson.val = _randomizerEnabledList.Count;
         }
 
 
@@ -597,6 +640,7 @@ namespace HSTA
         // Not saved in JSON
         protected Atom _atom;
         protected JSONStorable _receiver;
+        protected JSONStorableFloat _activeRandomizersJson;
         protected bool _skipUpdateVal = false;
 
         // receiver target parameter
@@ -849,6 +893,7 @@ namespace HSTA
         // Non-saved
         public JSONStorableFloat _targetVal;
         public JSONStorableFloat _curVal;
+
         public bool _shouldSave = false;
 
         public event Action UpdateEnabledListEvnt;
