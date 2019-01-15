@@ -100,6 +100,7 @@ namespace HSTA
                 CreateSlider(_displayRandomizer._quickness, true);
                 CreateSlider(_displayRandomizer._minVal, true);
                 CreateSlider(_displayRandomizer._maxVal, true);
+                CreateSlider(_displayRandomizer._percentage, true);
 
                 UIDynamicSlider slider = CreateSlider(_displayRandomizer._targetVal, true);
                 slider.defaultButtonEnabled = false;
@@ -643,6 +644,7 @@ namespace HSTA
             _quickness = new JSONStorableFloat(prefix + "quickness", 10f, onFloatChanged, 0f, 100f, true);
             _minVal = new JSONStorableFloat(prefix + "lowerValue", 0f, onFloatChanged, 0f, 1f, false);
             _maxVal = new JSONStorableFloat(prefix + "upperValue", 1f, onFloatChanged, 0f, 1f, false);
+            _percentage = new JSONStorableFloat(prefix + "percentage", 100.0f, onFloatChanged, 0f, 100f, false);
 
             _targetVal = new JSONStorableFloat("targetValue", 0f, 0f, 1f, false, false);
             _curVal = new JSONStorableFloat("currentValue", 0f, onCurValChanged, 0f, 1f, false, true);
@@ -672,6 +674,7 @@ namespace HSTA
             storables.Add(_period);
             storables.Add(_periodRandomMin);
             storables.Add(_periodRandomMax);
+            storables.Add(_percentage);
             storables.Add(_quickness);
             storables.Add(_minVal);
             storables.Add(_maxVal);
@@ -714,6 +717,7 @@ namespace HSTA
             CopyStorableFloat(aDst._period, aSrc._period, aDst._disableHandlers);
             CopyStorableFloat(aDst._periodRandomMin, aSrc._periodRandomMin, aDst._disableHandlers);
             CopyStorableFloat(aDst._periodRandomMax, aSrc._periodRandomMax, aDst._disableHandlers);
+            CopyStorableFloat(aDst._percentage, aSrc._percentage, aDst._disableHandlers);
             CopyStorableFloat(aDst._quickness, aSrc._quickness, aDst._disableHandlers);
             CopyStorableFloat(aDst._minVal, aSrc._minVal, aDst._disableHandlers );
             CopyStorableFloat(aDst._maxVal, aSrc._maxVal, aDst._disableHandlers);
@@ -755,8 +759,13 @@ namespace HSTA
                 // reset timer and set a new random target value
                 _targetTime += _period.val;
 
+                // Pick a new random value, but make sure it's within a percentage from our current value
+                float range = ((_maxVal.val - _minVal.val) / 100) * _percentage.val;
+                float randomMin = Math.Max( _curVal.val - range, _minVal.val );
+                float randomMax = Math.Min( _curVal.val + range, _maxVal.val );
+
                 // Start the lerping
-                _targetVal.val = UnityEngine.Random.Range(_minVal.val, _maxVal.val);
+                _targetVal.val = UnityEngine.Random.Range(randomMin, randomMax);
                 _lerping = true;
             }
 
@@ -832,6 +841,7 @@ namespace HSTA
         public JSONStorableFloat _period;
         public JSONStorableFloat _periodRandomMin;
         public JSONStorableFloat _periodRandomMax;
+        public JSONStorableFloat _percentage;
         public JSONStorableFloat _quickness;
         public JSONStorableFloat _minVal;
         public JSONStorableFloat _maxVal;
