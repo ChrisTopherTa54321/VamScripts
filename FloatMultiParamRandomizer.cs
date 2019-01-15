@@ -108,7 +108,7 @@ namespace HSTA
                 slider.label = "Period max val";
 
                 slider = CreateSlider(_displayRandomizer._quickness, true);
-                slider.label = "Quickness\nTransition time in sec";
+                slider.label = "Quickness";
 
                 slider = CreateSlider(_displayRandomizer._minVal, true);
                 slider.label = "Random range min val";
