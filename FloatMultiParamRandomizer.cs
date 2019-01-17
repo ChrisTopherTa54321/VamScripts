@@ -94,11 +94,49 @@ namespace HSTA
                     _lastBrowseDir = SuperController.singleton.mediaFileBrowserUI.defaultPath;
                 }
 
-                // Create per-randomizer sliders
                 var spacer = CreateSpacer();
                 spacer.height = 40;
 
-                var slider = CreateSlider(_displayRandomizer._period, true);
+                btn = CreateButton("Set Min to Current");
+                btn.button.onClick.AddListener(() =>
+                {
+                    _displayRandomizer._minVal.val = _displayRandomizer._curVal.val;
+                });
+
+                btn = CreateButton("Set Max to Current");
+                btn.button.onClick.AddListener(() =>
+                {
+                    _displayRandomizer._maxVal.val = _displayRandomizer._curVal.val;
+                });
+
+                spacer = CreateSpacer();
+                spacer.height = 40;
+
+                var countLabel = CreateTextField(new JSONStorableString("", ""));
+                JSONStorableFloat.SetFloatCallback callback = (float aVal) =>
+                {
+                    countLabel.text = pluginName + " " + pluginVersion + "\n"
+                                    + "\n"
+                                    + "Active randomizers: " + aVal.ToString()
+                                    ;
+                    pluginLabelJSON.val = String.Format("{0}->{1}, {2} running [{3}]", _atom.name, _receiverJSON.val, _randomizerEnabledList.Count.ToString(), pluginVersion);
+                };
+                countLabel.height = 10;
+                _activeRandomizersJson = new JSONStorableFloat("activeRandomizers", -1.0f, callback, 0.0f, 0.0f, false, false);
+
+                spacer = CreateSpacer();
+                spacer.height = 40;
+
+                _updateRate = new JSONStorableFloat("update_rate_ms", 15.0f, 0.0f, 1000f, false);
+                RegisterFloat(_updateRate);
+                var slider = CreateSlider(_updateRate);
+                slider.label = "Update Delay (ms)";
+                toggle = CreateToggle(_displayRandomizer._enabled);
+                toggle.label = "Enable Randomizer";
+
+
+                // Create per-randomizer sliders
+                slider = CreateSlider(_displayRandomizer._period, true);
                 slider.label = "Period\nSec between updates";
 
                 slider = CreateSlider(_displayRandomizer._periodRandomMin, true);
@@ -128,29 +166,6 @@ namespace HSTA
                 slider.label = "Current value\nYou can slide manually";
                 slider.defaultButtonEnabled = false;
                 slider.quickButtonsEnabled = false;
-
-                var countLabel = CreateTextField(new JSONStorableString("", ""));
-                JSONStorableFloat.SetFloatCallback callback = (float aVal) =>
-                {
-                    countLabel.text = pluginName + " " + pluginVersion + "\n"
-                                    + "\n"
-                                    + "Active randomizers: " + aVal.ToString() + "\n"
-                                    + "\n"
-                                    + "Update delay of 0 updates every frame."
-                                    ;
-                    pluginLabelJSON.val = String.Format("{0}->{1}, {2} running [{3}]", _atom.name, _receiverJSON.val, _randomizerEnabledList.Count.ToString(), pluginVersion);
-                };
-                _activeRandomizersJson = new JSONStorableFloat("activeRandomizers", -1.0f, callback, 0.0f, 0.0f, false, false);
-
-                _updateRate = new JSONStorableFloat("update_rate_ms", 15.0f, 0.0f, 1000f, false);
-                RegisterFloat(_updateRate);
-                 slider = CreateSlider(_updateRate);
-                slider.label = "Update Delay (ms)";
-
-                spacer = CreateSpacer();
-                spacer.height = 120;
-                toggle = CreateToggle(_displayRandomizer._enabled);
-                toggle.label = "Enable Randomizer";
 
                 // Trigger setting labels
                 _activeRandomizersJson.val = 0.0f;
