@@ -88,7 +88,7 @@ namespace HSTA
 
                 if( String.IsNullOrEmpty( _lastBrowseDir ) )
                 {
-                    _lastBrowseDir = GetPluginPath() + @"\fmpr_presets\";
+                    _lastBrowseDir = GetPluginPath() + @"fmpr_presets\";
                 }
 
                 var spacer = CreateSpacer();
@@ -277,7 +277,7 @@ namespace HSTA
             SuperController.singleton.currentSaveDir = SuperController.singleton.currentLoadDir;
             string pluginId = this.storeId.Split('_')[0];
             string pathToScriptFile = this.manager.GetJSON(true, true)["plugins"][pluginId].Value;
-            string pathToScriptFolder = pathToScriptFile.Substring(0, pathToScriptFile.LastIndexOfAny(new char[] { '/', '\\' }));
+            string pathToScriptFolder = pathToScriptFile.Substring(0, pathToScriptFile.LastIndexOfAny(new char[] { '/', '\\' }) + 1);
             pathToScriptFolder = pathToScriptFolder.Replace('/', '\\');
             return pathToScriptFolder;
         }
