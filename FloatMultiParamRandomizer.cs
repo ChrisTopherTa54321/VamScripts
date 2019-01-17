@@ -343,8 +343,10 @@ namespace HSTA
             {
                 atom = _atom.name;
             }
+            _atomJSON.valNoCallback = "None";
             _atomJSON.val = atom; // sync atom
 
+            _receiverJSON.valNoCallback = "None";
             _receiverJSON.val = receiver; // sync receiver
 
             foreach (JSONNode target in aJson["targets"].AsArray)
