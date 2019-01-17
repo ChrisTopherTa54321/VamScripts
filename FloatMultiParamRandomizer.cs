@@ -15,7 +15,7 @@ namespace HSTA
     public class FloatMultiParamRandomizer : MVRScript
     {
         const string pluginName = "FloatMultiParamRandomizer";
-        const string pluginVersion = "V1.0.5";
+        const string pluginVersion = "V1.0.5+";
         const string saveExt = "fmpr";
         public override void Init()
         {
@@ -138,9 +138,9 @@ namespace HSTA
                                     + "\n"
                                     + "Update delay of 0 updates every frame."
                                     ;
+                    pluginLabelJSON.val = String.Format("{0}->{1}, {2} running [{3}]", _atom.name, _receiverJSON.val, _randomizerEnabledList.Count.ToString(), pluginVersion);
                 };
                 _activeRandomizersJson = new JSONStorableFloat("activeRandomizers", -1.0f, callback, 0.0f, 0.0f, false, false);
-                _activeRandomizersJson.val = 0.0f;
 
                 _updateRate = new JSONStorableFloat("update_rate_ms", 15.0f, 0.0f, 1000f, false);
                 RegisterFloat(_updateRate);
@@ -151,6 +151,9 @@ namespace HSTA
                 spacer.height = 120;
                 toggle = CreateToggle(_displayRandomizer._enabled);
                 toggle.label = "Enable Randomizer";
+
+                // Trigger setting labels
+                _activeRandomizersJson.val = 0.0f;
             }
             catch (Exception e)
             {
@@ -516,7 +519,8 @@ namespace HSTA
             }
             _randomizerDict.Clear();
             _randomizerList.Clear();
-            
+            UpdateEnabledList();
+
             targetChoices.Add("None");
             if (_atom != null && receiverID != null)
             {
@@ -560,8 +564,6 @@ namespace HSTA
                 // Clear the display
                 ParamRandomizer.CopyValues(_displayRandomizer, new ParamRandomizer("display", null));
             }
-
-            pluginLabelJSON.val = String.Format("{0}->{1} [{2}]", _atom.name, receiverID, pluginVersion);
         }
 
 
@@ -599,7 +601,11 @@ namespace HSTA
                     _randomizerEnabledList.Add(randomizer);
                 }
             }
-            _activeRandomizersJson.val = _randomizerEnabledList.Count;
+
+            if( _activeRandomizersJson != null )
+            {
+                _activeRandomizersJson.val = _randomizerEnabledList.Count;
+            }
         }
 
 
