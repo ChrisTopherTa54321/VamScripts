@@ -399,7 +399,7 @@ namespace HSTA
             {
                 return;
             }
-            _lastBrowseDir = aPath;
+            _lastBrowseDir = aPath.Substring(0, aPath.LastIndexOfAny(new char[] { '/', '\\' }));
 
             if ( !aPath.ToLower().EndsWith(saveExt.ToLower()))
             {
@@ -416,8 +416,7 @@ namespace HSTA
             {
                 return;
             }
-            _lastBrowseDir = aPath;
-
+            _lastBrowseDir = aPath.Substring(0, aPath.LastIndexOfAny(new char[] { '/', '\\' }));
             LoadSaveJson(this.LoadJSON(aPath));
         }
 
