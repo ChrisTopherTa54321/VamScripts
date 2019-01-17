@@ -69,8 +69,11 @@ namespace HSTA
                 _addAnimatable = new JSONStorableBool("autoSetAnimatable", true);
                 var toggle = CreateToggle(_addAnimatable);
                 toggle.label = "Auto-set 'animatable' on load";
-                _loadReceiver = new JSONStorableBool("Set 'receiver' on load", true);
-                CreateToggle(_loadReceiver);
+                _setReceiverOnLoad = new JSONStorableBool("setReceiverOnLoad", true);
+                toggle = CreateToggle(_setReceiverOnLoad);
+                toggle.label = "Set 'receiver' on load";
+
+                _setAtomOnLoad = new JSONStorableBool("setAtomOnLoad", false);
 
                 btn = CreateButton("Save Preset");
                 btn.button.onClick.AddListener(() =>
@@ -282,8 +285,6 @@ namespace HSTA
             foreach (var randomizer in _randomizerList)
             {
                 JSONClass randomizerNode = new JSONClass();
-                saveJson["targets"].Add(randomizerNode);
-                randomizerNode["id"] = randomizer._id;
                 foreach (var storable in randomizer.GetStorableBools())
                 {
                     storable.StoreJSON(randomizerNode);
@@ -291,6 +292,12 @@ namespace HSTA
                 foreach (var storable in randomizer.GetStorableFloats())
                 {
                     storable.StoreJSON(randomizerNode);
+                }
+
+                if (randomizerNode.Count > 0)
+                {
+                    randomizerNode["id"] = randomizer._id;
+                    saveJson["targets"].Add(randomizerNode);
                 }
             }
             return saveJson;
@@ -300,7 +307,7 @@ namespace HSTA
         void LoadSaveJson(JSONNode aJson)
         {
             string receiver;
-            if (_loadReceiver.val)
+            if (_setReceiverOnLoad.val)
             {
                 receiver = aJson["receiver"].Value;
             }
@@ -308,7 +315,17 @@ namespace HSTA
             {
                 receiver = _receiverJSON.val;
             }
-            SyncAtom(_atom.name);
+
+            string atom;
+            if( _setAtomOnLoad.val )
+            {
+                atom = aJson["atom"].Value;
+            }
+            else
+            {
+                atom = _atom.name;
+            }
+            _atomJSON.val = atom; // sync atom
 
             _receiverJSON.val = receiver; // sync receiver
 
@@ -441,9 +458,30 @@ namespace HSTA
             _atomJSON.choices = atomChoices;
         }
 
+
+        IEnumerator DelayLoadSavedJson( JSONClass aJson, float aDelay )
+        {
+            yield return new WaitForSecondsRealtime(aDelay);
+
+            pluginLabelJSON.val = "*Values lost* This happens on Load Look";
+
+            bool prevVal = _setAtomOnLoad.val;
+            _setAtomOnLoad.valNoCallback = true;
+            LoadSaveJson(aJson);
+            _setAtomOnLoad.valNoCallback = prevVal;
+        }
+
         // receiver Atom
         protected void SyncAtom(string atomUID)
         {
+            // Workaround Load Look losing all of our values
+            if ( String.IsNullOrEmpty(atomUID) )
+            {
+                // This will restore Atom and Receiver, but randomizers are already lost
+                StartCoroutine( DelayLoadSavedJson( GetSaveJson(), 0.1f) );
+                return;
+            }
+
             string defaultReceiver = "None";
             List<string> receiverChoices = new List<string>();
             receiverChoices.Add( defaultReceiver );
@@ -677,7 +715,8 @@ namespace HSTA
         protected ParamRandomizer _displayRandomizer;
         protected UIDynamicPopup _displayPopup; // any UI element, just to check if visible
         protected JSONStorableBool _addAnimatable;
-        protected JSONStorableBool _loadReceiver;
+        protected JSONStorableBool _setAtomOnLoad;
+        protected JSONStorableBool _setReceiverOnLoad;
         protected string _origFileFormat;
         protected string _lastBrowseDir;
 
