@@ -94,7 +94,7 @@ namespace HSTA
 
                 if( String.IsNullOrEmpty( _lastBrowseDir ) )
                 {
-                    _lastBrowseDir = SuperController.singleton.mediaFileBrowserUI.defaultPath;
+                    _lastBrowseDir = GetPluginPath() + @"\fpmr_presets";
                 }
 
                 var spacer = CreateSpacer();
@@ -272,6 +272,24 @@ namespace HSTA
                     SuperController.LogError(e.ToString());
                 }
             }
+        }
+
+
+        string GetPluginPath()
+        {
+            string path = "";
+            string pluginId = this.storeId.Split('_')[0];
+            foreach (var pluginUi in this.manager.pluginListPanel.GetComponentsInChildren<MVRPluginUI>())
+            {
+                if (pluginUi.uidText.text == pluginId)
+                {
+                    path = pluginUi.urlText.text;
+                    path = path.Substring(0, path.LastIndexOfAny(new char[] { '/', '\\' }));
+                    path = path.Replace('/', '\\'); // backslash required for file dialogs
+                    break;
+                }
+            }
+            return path;
         }
 
 
