@@ -21,8 +21,6 @@ namespace HSTA
         {
             try
             {
-                _origFileFormat = SuperController.singleton.fileBrowserUI.fileFormat;
-
                 _displayRandomizer = new ParamRandomizer("display", null);
                 _displayRandomizer.UpdateEnabledListEvnt += UpdateEnabledList;
 
@@ -57,12 +55,8 @@ namespace HSTA
                 var btn = CreateButton("Load Preset");
                 btn.button.onClick.AddListener(() =>
                 {
-                    uFileBrowser.FileBrowser browser = SuperController.singleton.fileBrowserUI;
-
-                    browser.defaultPath = _lastBrowseDir;
-                    browser.SetTextEntry(false);
-                    browser.fileFormat = saveExt;
-                    browser.Show(HandleLoadPreset);
+                    SuperController.singleton.NormalizeMediaPath(_lastBrowseDir); // This sets the path iff it exists
+                    SuperController.singleton.GetMediaPathDialog(HandleLoadPreset, saveExt);
                 });
 
 
@@ -78,12 +72,12 @@ namespace HSTA
                 btn = CreateButton("Save Preset");
                 btn.button.onClick.AddListener(() =>
                 {
-                    uFileBrowser.FileBrowser browser = SuperController.singleton.fileBrowserUI;
+                    SuperController.singleton.NormalizeMediaPath(_lastBrowseDir); // This sets the path iff it exists
+                    SuperController.singleton.GetMediaPathDialog(HandleSavePreset, saveExt);
 
-                    browser.defaultPath = _lastBrowseDir;
+                    // Update the browser to be a Save browser
+                    uFileBrowser.FileBrowser browser = SuperController.singleton.mediaFileBrowserUI;
                     browser.SetTextEntry(true);
-                    browser.fileFormat = saveExt;
-                    browser.Show(HandleSavePreset);
                     browser.fileEntryField.text = String.Format("{0}.{1}", ((int)(DateTime.UtcNow - new DateTime(1970, 1, 1)).TotalSeconds).ToString(), saveExt);
                     browser.ActivateFileNameField();
                 });
@@ -94,7 +88,7 @@ namespace HSTA
 
                 if( String.IsNullOrEmpty( _lastBrowseDir ) )
                 {
-                    _lastBrowseDir = GetPluginPath() + @"\fpmr_presets";
+                    _lastBrowseDir = GetPluginPath() + @"\fmpr_presets\";
                 }
 
                 var spacer = CreateSpacer();
@@ -225,7 +219,10 @@ namespace HSTA
 
         protected void SetWaitForMissingReceiver(string aReceiver)
         {
-            StopCoroutine(_missingRecvCo);
+            if( null != _missingRecvCo )
+            {
+                StopCoroutine(_missingRecvCo);
+            }
             _missingReceiverStoreId = aReceiver;
             _missingRecvCo = StartCoroutine(MissingReceiverCo());
         }
@@ -277,21 +274,13 @@ namespace HSTA
 
         string GetPluginPath()
         {
-            string path = "";
+            SuperController.singleton.currentSaveDir = SuperController.singleton.currentLoadDir;
             string pluginId = this.storeId.Split('_')[0];
-            foreach (var pluginUi in this.manager.pluginListPanel.GetComponentsInChildren<MVRPluginUI>())
-            {
-                if (pluginUi.uidText.text == pluginId)
-                {
-                    path = pluginUi.urlText.text;
-                    path = path.Substring(0, path.LastIndexOfAny(new char[] { '/', '\\' }));
-                    path = path.Replace('/', '\\'); // backslash required for file dialogs
-                    break;
-                }
-            }
-            return path;
+            string pathToScriptFile = this.manager.GetJSON(true, true)["plugins"][pluginId].Value;
+            string pathToScriptFolder = pathToScriptFile.Substring(0, pathToScriptFile.LastIndexOfAny(new char[] { '/', '\\' }));
+            pathToScriptFolder = pathToScriptFolder.Replace('/', '\\');
+            return pathToScriptFolder;
         }
-
 
         JSONClass GetSaveJson()
         {
@@ -396,12 +385,11 @@ namespace HSTA
 
         void HandleSavePreset(string aPath)
         {
-            SuperController.singleton.fileBrowserUI.fileFormat = _origFileFormat;
             if (String.IsNullOrEmpty(aPath))
             {
                 return;
             }
-            _lastBrowseDir = aPath.Substring(0, aPath.LastIndexOfAny(new char[] { '/', '\\' }));
+            _lastBrowseDir = aPath.Substring(0, aPath.LastIndexOfAny(new char[] { '/', '\\' })) + @"\";
 
             if ( !aPath.ToLower().EndsWith(saveExt.ToLower()))
             {
@@ -413,12 +401,11 @@ namespace HSTA
 
         void HandleLoadPreset( string aPath )
         {
-            SuperController.singleton.fileBrowserUI.fileFormat = _origFileFormat;
             if (String.IsNullOrEmpty(aPath))
             {
                 return;
             }
-            _lastBrowseDir = aPath.Substring(0, aPath.LastIndexOfAny(new char[] { '/', '\\' }));
+            _lastBrowseDir = aPath.Substring(0, aPath.LastIndexOfAny(new char[] { '/', '\\' })) + @"\";
             LoadSaveJson(this.LoadJSON(aPath));
         }
 
@@ -590,7 +577,6 @@ namespace HSTA
             }
             _randomizerDict.Clear();
             _randomizerList.Clear();
-            UpdateEnabledList();
 
             if (_atom != null && receiverID != null)
             {
@@ -637,6 +623,7 @@ namespace HSTA
                 // Clear the display
                 ParamRandomizer.CopyValues(_displayRandomizer, new ParamRandomizer("display", null));
             }
+            UpdateEnabledList();
         }
 
 
@@ -737,7 +724,6 @@ namespace HSTA
         protected JSONStorableBool _addAnimatable;
         protected JSONStorableBool _setAtomOnLoad;
         protected JSONStorableBool _setReceiverOnLoad;
-        protected string _origFileFormat;
         protected string _lastBrowseDir;
 
         List<ParamRandomizer> _randomizerList = new List<ParamRandomizer>();
