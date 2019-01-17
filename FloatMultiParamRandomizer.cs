@@ -15,7 +15,7 @@ namespace HSTA
     public class FloatMultiParamRandomizer : MVRScript
     {
         const string pluginName = "FloatMultiParamRandomizer";
-        const string pluginVersion = "V1.0.6";
+        const string pluginVersion = "V1.0.6+";
         const string saveExt = "fmpr";
         public override void Init()
         {
@@ -587,13 +587,11 @@ namespace HSTA
             {
                 // Otherwise if the receiver changed then clear the enabled list
                 _randomizerEnabledList.Clear();
-                defaultTarget = "None";
             }
             _randomizerDict.Clear();
             _randomizerList.Clear();
             UpdateEnabledList();
 
-            targetChoices.Add("None");
             if (_atom != null && receiverID != null)
             {
                 if (!_skipUpdateVal)
@@ -617,7 +615,7 @@ namespace HSTA
                         targetChoices.Add(paramName);
                     }
                 }
-                else if (receiverID != defaultTarget)
+                else
                 {
                     // some storables can be late loaded, like skin, clothing, hair, etc so must keep track of missing receiver
                     //SuperController.LogMessage("Missing receiver: " + receiverID);
@@ -632,7 +630,10 @@ namespace HSTA
             _targetJson.choices = targetChoices;
             if (!_skipUpdateVal || !targetChoices.Contains(_receiverJSON.val))
             {
-                _targetJson.val = defaultTarget;
+                if( targetChoices.Count > 0 )
+                {
+                    _targetJson.val = targetChoices[0];
+                }
                 // Clear the display
                 ParamRandomizer.CopyValues(_displayRandomizer, new ParamRandomizer("display", null));
             }
