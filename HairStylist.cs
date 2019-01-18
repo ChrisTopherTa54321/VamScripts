@@ -9,7 +9,7 @@ namespace HSTA
     public class HairStylist : MVRScript
     {
         public static string pluginName = "HairStylist";
-        public static string pluginVersion = "V0.2.0";
+        public static string pluginVersion = "V0.3.0";
         public static string saveExt = "json";
 
         public override void Init()
@@ -230,6 +230,19 @@ namespace HSTA
             DAZCharacterSelector character = aPerson.GetStorableByID("geometry") as DAZCharacterSelector;
             List<string> restoreList = new List<string>();
 
+            HairStyle colorStyle = null;
+
+            if (aColor)
+            {
+                restoreList.AddRange(colorList);
+            }
+            else if (aStyle)
+            {
+                // If we are copying Style, but not Color, the color may change to whatever
+                // was last stored on the new style. So, let's copy the current color over.
+                colorStyle = HairStyle.CreateFromPerson(aPerson);
+            }
+
             if (aStyle)
             {
                 restoreList.AddRange(styleList);
@@ -239,10 +252,6 @@ namespace HSTA
                     styleJson.val = _style;
                 }
             }
-            if ( aColor )
-            {
-                restoreList.AddRange(colorList);
-            }
             if( aPhysics )
             {
                 restoreList.AddRange(physicsList);
@@ -251,6 +260,12 @@ namespace HSTA
             // Must get hairControl *after* changing style
             HairSimControl hairControl = character?.GetComponentInChildren<HairSimControl>();
             RestoreStorable(hairControl, this._savedJson, restoreList);
+
+            // If we switched styles without loading color, then copy over the color from the last style
+            if( colorStyle != null )
+            {
+                RestoreStorable(hairControl, colorStyle._savedJson, colorList);
+            }
         }
 
 
