@@ -398,31 +398,6 @@ namespace HSTA
             "curveDensity",
             "hairMultiplier"
         };
-        //// Saveables
-        //public string _id;
-        //public JSONStorableBool _enabled;
-        //public JSONStorableFloat _period;
-        //public JSONStorableFloat _periodRandomMin;
-        //public JSONStorableFloat _periodRandomMax;
-        //public JSONStorableFloat _percentage;
-        //public JSONStorableFloat _quickness;
-        //public JSONStorableFloat _minVal;
-        //public JSONStorableFloat _maxVal;
-
-        //// Non-saved
-        //public JSONStorableFloat _targetVal;
-        //public JSONStorableFloat _curVal;
-
-        //public bool _shouldSave = false;
-
-        //public event Action UpdateEnabledListEvnt;
-        //public ParamRandomizer _syncTarget { get; private set; }
-        //JSONStorableFloat _target;
-        //private bool _disableHandlers = false;
-
-        //float _timer;
-        //float _targetTime;
-        //bool _lerping = false;
     }
 
 }
