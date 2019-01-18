@@ -6,9 +6,6 @@ using UnityEngine;
 
 namespace HSTA
 {
-
-    // This class will produce a random number that can be used to set any float param available in all atoms
-    // includes random generation period, smoothing, and range selection options
     public class HairStylist : MVRScript
     {
         public static string pluginName = "HairStylist";
