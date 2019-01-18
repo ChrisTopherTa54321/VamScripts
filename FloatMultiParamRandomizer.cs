@@ -26,6 +26,7 @@ namespace HSTA
 
                 // make atom selector
                 _atomJSON = new JSONStorableStringChooser("atom", SuperController.singleton.GetAtomUIDs(), null, "Atom", SyncAtom);
+                _atomJSON.storeType = JSONStorableParam.StoreType.Physical;
                 RegisterStringChooser(_atomJSON);
                 SyncAtomChoices();
                 _displayPopup = CreateScrollablePopup(_atomJSON);
@@ -36,6 +37,7 @@ namespace HSTA
 
                 // make receiver selector
                 _receiverJSON = new JSONStorableStringChooser("receiver", null, null, "Receiver", SyncReceiver);
+                _receiverJSON.storeType = JSONStorableParam.StoreType.Physical;
                 RegisterStringChooser(_receiverJSON);
                 _displayPopup = CreateScrollablePopup(_receiverJSON);
                 _displayPopup.popupPanelHeight = 960f;
@@ -45,6 +47,7 @@ namespace HSTA
 
                 // make receiver target selector
                 _targetJson = new JSONStorableStringChooser("receiverTarget", null, null, "Target", SyncTargets);
+                _targetJson.storeType = JSONStorableParam.StoreType.Physical;
                 _displayPopup = CreateScrollablePopup(_targetJson);
                 _displayPopup.popupPanelHeight = 820f;
                 // want to always resync the targets, since morphs can be marked animatable
@@ -464,30 +467,9 @@ namespace HSTA
             _atomJSON.choices = atomChoices;
         }
 
-
-        IEnumerator DelayLoadSavedJson( JSONClass aJson, float aDelay )
-        {
-            yield return new WaitForSecondsRealtime(aDelay);
-
-            pluginLabelJSON.val = "*Values lost* This happens on Load Look";
-
-            bool prevVal = _setAtomOnLoad.val;
-            _setAtomOnLoad.valNoCallback = true;
-            LoadSaveJson(aJson);
-            _setAtomOnLoad.valNoCallback = prevVal;
-        }
-
         // receiver Atom
         protected void SyncAtom(string atomUID)
         {
-            // Workaround Load Look losing all of our values
-            if ( String.IsNullOrEmpty(atomUID) )
-            {
-                // This will restore Atom and Receiver, but randomizers are already lost
-                StartCoroutine( DelayLoadSavedJson( GetSaveJson(), 0.1f) );
-                return;
-            }
-
             string defaultReceiver = "None";
             List<string> receiverChoices = new List<string>();
             receiverChoices.Add( defaultReceiver );
@@ -748,13 +730,28 @@ namespace HSTA
             }
 
             _enabled = new JSONStorableBool(prefix + "enabled", false, onEnabledChanged);
+            _enabled.storeType = JSONStorableParam.StoreType.Physical;
+
             _period = new JSONStorableFloat(prefix + "period", 0.5f, onPeriodChanged, 0f, 10f, false);
+            _period.storeType = JSONStorableParam.StoreType.Physical;
+
             _periodRandomMin = new JSONStorableFloat(prefix + "periodLowerValue", 0.0f, onFloatChanged, 0f, 10f, false);
+            _periodRandomMin.storeType = JSONStorableParam.StoreType.Physical;
+
             _periodRandomMax = new JSONStorableFloat(prefix + "periodUpperValue", 2.0f, onFloatChanged, 0f, 10f, false);
+            _periodRandomMax.storeType = JSONStorableParam.StoreType.Physical;
+
             _quickness = new JSONStorableFloat(prefix + "quickness", 10f, onFloatChanged, 0f, 100f, true);
+            _quickness.storeType = JSONStorableParam.StoreType.Physical;
+
             _minVal = new JSONStorableFloat(prefix + "lowerValue", 0f, onFloatChanged, 0f, 1f, false);
+            _minVal.storeType = JSONStorableParam.StoreType.Physical;
+
             _maxVal = new JSONStorableFloat(prefix + "upperValue", 1f, onFloatChanged, 0f, 1f, false);
+            _maxVal.storeType = JSONStorableParam.StoreType.Physical;
+
             _percentage = new JSONStorableFloat(prefix + "percentage", 100.0f, onFloatChanged, 0f, 100f, false);
+            _percentage.storeType = JSONStorableParam.StoreType.Physical;
 
             _targetVal = new JSONStorableFloat("targetValue", 0f, 0f, 1f, false, false);
             _curVal = new JSONStorableFloat("currentValue", 0f, onCurValChanged, 0f, 1f, false, true);
