@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using SimpleJSON;
 using UnityEngine;
@@ -11,7 +12,7 @@ namespace HSTA
     public class HairStylist : MVRScript
     {
         public static string pluginName = "HairStylist";
-        public static string pluginVersion = "V0.1.0";
+        public static string pluginVersion = "V0.2.0";
         public static string saveExt = "json";
 
         public override void Init()
@@ -185,7 +186,7 @@ namespace HSTA
             HairStyle newHair = null;
             DAZCharacterSelector character = aPerson?.GetStorableByID("geometry") as DAZCharacterSelector;
             HairSimControl hairControl = character?.GetComponentInChildren<HairSimControl>();
-            
+
             if( null != hairControl)
             {
                 newHair = new HairStyle();
@@ -226,32 +227,33 @@ namespace HSTA
             return newHair;
         }
 
+
         public void ApplyToPerson( Atom aPerson, bool aColor = true, bool aStyle = true, bool aPhysics = true )
         {
-            DAZCharacterSelector character = aPerson?.GetStorableByID("geometry") as DAZCharacterSelector;
-            HairSimControl hairControl = character?.GetComponentInChildren<HairSimControl>();
-            if ( null != hairControl )
+            DAZCharacterSelector character = aPerson.GetStorableByID("geometry") as DAZCharacterSelector;
+            List<string> restoreList = new List<string>();
+
+            if (aStyle)
             {
-                List<string> restoreList = new List<string>();
-                if( aColor )
+                restoreList.AddRange(styleList);
+                var styleJson = character?.GetComponentInChildren<HairSimStyleControl>()?.GetStringChooserJSONParam("choiceName");
+                if (styleJson != null)
                 {
-                    restoreList.AddRange(colorList);
+                    styleJson.val = _style;
                 }
-                if( aStyle )
-                {
-                    restoreList.AddRange(styleList);
-
-                    var style = character.GetComponentInChildren<HairSimStyleControl>();
-                    var styleChoice = style.GetStringChooserJSONParam("choiceName");
-                    styleChoice.val = _style;
-                }
-                if( aPhysics )
-                {
-                    restoreList.AddRange(physicsList);
-                }
-
-                RestoreStorable(hairControl, this._savedJson, restoreList );
             }
+            if ( aColor )
+            {
+                restoreList.AddRange(colorList);
+            }
+            if( aPhysics )
+            {
+                restoreList.AddRange(physicsList);
+            }
+
+            // Must get hairControl *after* changing style
+            HairSimControl hairControl = character?.GetComponentInChildren<HairSimControl>();
+            RestoreStorable(hairControl, this._savedJson, restoreList);
         }
 
 
