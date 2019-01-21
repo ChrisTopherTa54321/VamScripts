@@ -6,11 +6,12 @@ using UnityEngine;
 
 namespace HSTA
 {
+    using JsonDict = Dictionary<string, JSONClass>;
     public class HairStylist : MVRScript
     {
         public static string pluginName = "HairStylist";
-        public static string pluginVersion = "V0.3.0+";
-        public static string saveExt = "json";
+        public static string pluginVersion = "V0.8.0";
+        public static string saveExt = "hair";
 
         public override void Init()
         {
@@ -163,7 +164,7 @@ namespace HSTA
             }
             _lastBrowseDir = aPath.Substring(0, aPath.LastIndexOfAny(new char[] { '/', '\\' })) + @"\";
 
-            if (!aPath.ToLower().EndsWith(saveExt.ToLower()))
+            if (!aPath.ToLower().EndsWith("." + saveExt.ToLower()))
             {
                 aPath += "." + saveExt;
             }
@@ -203,42 +204,72 @@ namespace HSTA
     {
         public static HairStyle CreateFromPerson( Atom aPerson )
         {
-            HairStyle newHair = null;
+            HairStyle newHair = new HairStyle();
             DAZCharacterSelector character = aPerson?.GetStorableByID("geometry") as DAZCharacterSelector;
-            HairSimControl hairControl = character?.GetComponentInChildren<HairSimControl>();
 
-            if( null != hairControl)
+            // Find relevant storables
+            JSONStorable moveContainer = FindStorableByName(aPerson, "ScalpContainer");
+            JSONStorable hairSettings = FindStorableByName(aPerson, "HairSettings");
+            JSONStorable scalps = FindStorableByName( aPerson, "Scalps");
+            JSONStorable styles = FindStorableByName(aPerson, "Styles");
+
+            // Get Style and Scalp choices
+            string scalpName = scalps.GetStringChooserParamValue("choiceName");
+            string styleName = styles.GetStringChooserParamValue("choiceName");
+
+            // Scalp store name is based on scalp name, so find the correct storable based on it
+            JSONStorable scalpStorable = null;
+            if (scalpName != "NoScalp")
             {
-                newHair = new HairStyle();
-                newHair.SaveStorable(hairControl, out newHair._savedJson);
-
-
-                // TODO: Integrate this better
-                var style = character.GetComponentInChildren<HairSimStyleControl>();
-                var styleChoice = style.GetStringChooserJSONParam("choiceName");
-                newHair._style = styleChoice.val;
+                scalpStorable = FindStorableByName(aPerson, scalpName.Replace("Scalp", "HairScalp"));
             }
-            else
+
+            List<JSONStorable> saveList = new List<JSONStorable>();
+            saveList.Add(styles);
+            saveList.Add(scalps);
+            saveList.Add(moveContainer);
+            saveList.Add(hairSettings);
+            if( scalpStorable != null )
             {
-                SuperController.LogError("This plugin only works on SimV2 Hair");
+                saveList.Add(scalpStorable);
+            }
+
+
+            // Create save
+            JsonDict newSaveStorable;
+            foreach( var storable in saveList )
+            {
+                string saveName = storable.name;
+                // Scalp storable name changes depending on scalp, so we'll rename it to a constant name
+                if( storable == scalpStorable )
+                {
+                    saveName = "scalpParams";
+                }
+                newHair.SaveStorable(storable, out newSaveStorable);
+                newHair._savedJson[saveName] = newSaveStorable;
             }
 
             return newHair;
         }
 
+
         public static HairStyle CreateFromSavedJson(JSONNode aJson)
         {
             HairStyle newHair = null;
-            if( aJson["savedByPlugin"].Value == HairStylist.pluginName )
+            if (aJson["savedByPlugin"].Value == HairStylist.pluginName)
             {
                 newHair = new HairStyle();
-                newHair._savedJson = new Dictionary<string, JSONClass>();
-                foreach (JSONNode kp in aJson["storables"].AsArray)
-                {
-                    newHair._savedJson.Add(kp["id"], kp.AsObject);
-                }
-                newHair._style = aJson["style"];
 
+                foreach (JSONClass storableNode in aJson["storables"].AsArray)
+                {
+                    string saveGroup = storableNode["storableName"];
+                    JsonDict groupDict = new JsonDict();
+                    foreach( JSONClass paramNode in storableNode["params"].AsArray)
+                    {
+                        groupDict.Add(paramNode["id"], paramNode.AsObject);
+                    }
+                    newHair._savedJson[saveGroup] = groupDict;
+                }
             }
             else
             {
@@ -247,72 +278,126 @@ namespace HSTA
             return newHair;
         }
 
-
-        public void ApplyToPerson( Atom aPerson, bool aColor = true, bool aStyle = true, bool aPhysics = true )
-        {
-            DAZCharacterSelector character = aPerson.GetStorableByID("geometry") as DAZCharacterSelector;
-            List<string> restoreList = new List<string>();
-
-            HairStyle colorStyle = null;
-
-            if (aColor)
-            {
-                restoreList.AddRange(colorList);
-            }
-            else if (aStyle)
-            {
-                // If we are copying Style, but not Color, the color may change to whatever
-                // was last stored on the new style. So, let's copy the current color over.
-                colorStyle = HairStyle.CreateFromPerson(aPerson);
-            }
-
-            if (aStyle)
-            {
-                restoreList.AddRange(styleList);
-                var styleJson = character?.GetComponentInChildren<HairSimStyleControl>()?.GetStringChooserJSONParam("choiceName");
-                if (styleJson != null)
-                {
-                    styleJson.val = _style;
-                }
-            }
-            if( aPhysics )
-            {
-                restoreList.AddRange(physicsList);
-            }
-
-            // Must get hairControl *after* changing style
-            HairSimControl hairControl = character?.GetComponentInChildren<HairSimControl>();
-            RestoreStorable(hairControl, this._savedJson, restoreList);
-
-            // If we switched styles without loading color, then copy over the color from the last style
-            if( colorStyle != null )
-            {
-                colorStyle.ApplyToPerson(aPerson, true, false, false);
-            }
-        }
-
-
         public JSONClass GetSaveJson()
         {
             JSONClass saveJson = new JSONClass();
             saveJson["savedByPlugin"] = HairStylist.pluginName;
             saveJson["savedByVer"] = HairStylist.pluginVersion;
-
-            saveJson["style"] = _style;
-            saveJson["storables"] = new JSONArray();
-
-            foreach (var kp in _savedJson)
+            var storables = new JSONArray();
+            foreach (var saveGroup in _savedJson)
             {
-                saveJson["storables"].Add(kp.Key, kp.Value);
+                JSONClass newNode = new JSONClass();
+                string groupName = saveGroup.Key;
+                newNode["storableName"] = groupName;
+
+                var newGroup = new JSONArray();
+                foreach (var kp in saveGroup.Value)
+                {
+                    newGroup.Add(kp.Key, kp.Value);
+                }
+                newNode["params"] = newGroup;
+                storables.Add(newNode);
             }
+            saveJson["storables"] = storables;
             return saveJson;
         }
 
 
-        private void SaveStorable( JSONStorable aStorable, out Dictionary<string, JSONClass> aDict )
+        public void ApplyToPerson( Atom aPerson, bool aColor = true, bool aStyle = true, bool aPhysics = true )
         {
-            aDict = new Dictionary<string, JSONClass>();
+            DAZCharacterSelector character = aPerson.GetStorableByID("geometry") as DAZCharacterSelector;
+            List<string> hairSettingsRestoreList = new List<string>();
+            List<string> restoreStorablesList = new List<string>();
 
+            HairStyle origStyle = null;
+            // Colors are stored per-style. If we change styles, but not color, the color will change.
+            // So, if we are changing style but not color, we need to store off the current color and
+            // restore it after the style change to ensure the color doesn't actually change.
+            if( aStyle && !aColor )
+            {
+                origStyle = HairStyle.CreateFromPerson(aPerson);
+            }
+
+            JSONStorable scalps = FindStorableByName(aPerson, "Scalps");
+            JSONStorable styles = FindStorableByName(aPerson, "Styles");
+
+            // Apply any style changes so we are sure to apply modifications to the correct style
+            if ( aStyle )
+            {
+                RestoreStorable(scalps, _savedJson["Scalps"]);
+                RestoreStorable(styles, _savedJson["Styles"]);
+            }
+
+            // Now that any style change is done, let's get the rest of the storables
+            JSONStorable moveContainer = FindStorableByName(aPerson, "ScalpContainer");
+            JSONStorable hairSettings = FindStorableByName(aPerson, "HairSettings");
+
+            // Get Style and Scalp choices
+            string scalpName = scalps.GetStringChooserParamValue("choiceName");
+            JSONStorable scalpStorable = null;
+            if( scalpName != "NoScalp" )
+            {
+                scalpStorable = FindStorableByName(aPerson, scalpName.Replace("Scalp", "HairScalp"));
+            }
+
+            // HairSettings contains color, style and physics, so has a special-case filter list
+            if (aColor)
+            {
+                restoreStorablesList.AddRange(colorLoadList);
+                hairSettingsRestoreList.AddRange(simColorList);
+            }
+            if (aStyle)
+            {
+                restoreStorablesList.AddRange(styleLoadList);
+                hairSettingsRestoreList.AddRange(simStyleList);
+                // Scalp style has already been restored, if applicable.
+            }
+            if( aPhysics )
+            {
+                restoreStorablesList.AddRange(physicsLoadList);
+                hairSettingsRestoreList.AddRange(simPhysicsList);
+            }
+
+            foreach (var saveGroup in _savedJson)
+            {
+                List<string> restoreList = null;
+                string groupName = saveGroup.Key;
+                if( !restoreStorablesList.Contains(groupName))
+                {
+                    continue;
+                }
+
+                // Hair Settings contains all parameters for sim hair so must be filtered
+                if( groupName == "HairSettings")
+                {
+                    restoreList = hairSettingsRestoreList;
+                }
+
+                // Scalp params are stored per-style, but saved as scalpParams. Adjust the name to the current style.
+                if( groupName == "scalpParams" )
+                {
+                    if( null != scalpStorable )
+                    {
+                        groupName = scalpStorable.name;
+                    }
+                    else
+                    {
+                        continue; // Can't save scalp parameters when there is no scalp
+                    }
+                }
+
+                // Restore the setting!
+                var storable = FindStorableByName(aPerson, groupName);
+                RestoreStorable(storable, saveGroup.Value, restoreList);
+            }
+
+            // If we switched styles without loading color, then copy over the color from the last style
+            origStyle?.ApplyToPerson(aPerson, true, false, false);
+        }
+
+        private void SaveStorable( JSONStorable aStorable, out JsonDict aDict )
+        {
+            aDict = new JsonDict();
             foreach(var param in aStorable.GetAllParamAndActionNames() )
             {
                 var type = aStorable.GetParamOrActionType(param);
@@ -340,6 +425,10 @@ namespace HSTA
                         aStorable.GetStringJSONParam(param)?.StoreJSON(storableParams);
                         break;
 
+                    case JSONStorable.Type.StringChooser:
+                        aStorable.GetStringChooserJSONParam(param)?.StoreJSON(storableParams);
+                        break;
+
                     default:
                         SuperController.LogError("Unhandled type: " + type.ToString());
                         break;
@@ -351,7 +440,7 @@ namespace HSTA
         }
 
 
-        private void RestoreStorable(JSONStorable aStorable, Dictionary<string, JSONClass> aDict, List<string> aRestoreList = null)
+        private void RestoreStorable(JSONStorable aStorable, JsonDict aDict, List<string> aRestoreList = null)
         {
             foreach( var kp in aDict)
             {
@@ -382,19 +471,60 @@ namespace HSTA
                         aStorable.GetStringJSONParam(param)?.RestoreFromJSON(paramJson);
                         break;
 
+                    case JSONStorable.Type.StringChooser:
+                        aStorable.GetStringChooserJSONParam(param)?.RestoreFromJSON(paramJson);
+                        break;
+
                     default:
                         SuperController.LogError("Unhandled type: " + type.ToString());
                         break;
                 }
             }
-
         }
 
-        private Dictionary<string, JSONClass> _savedJson;
-        private string _style;
 
+        static JSONStorable FindStorableByName( Atom aAtom, string aName )
+        {
+            JSONStorable ret = null;
+            foreach (var storable in aAtom.GetComponentsInChildren<JSONStorable>())
+            {
+                if( storable.name == aName )
+                {
+                    ret = storable;
+                    break;
+                }
+            }
 
-        static private List<string> styleList = new List<string>
+            if( null == ret )
+            {
+                SuperController.LogError("Couldn't find storable named " + aName);
+            }
+            return ret;
+        }
+
+        Dictionary<string, JsonDict> _savedJson = new Dictionary<string, JsonDict>();
+
+        static private List<string> styleLoadList = new List<string>()
+        {
+            "Styles",
+            "Scalps",
+            "ScalpContainer",
+            "HairSettings",
+            "scalpParams",
+        };
+
+        static private List<string> colorLoadList = new List<string>()
+        {
+            "HairSettings",
+            "scalpParams",
+        };
+
+        static private List<string> physicsLoadList = new List<string>()
+        {
+            "HairSettings",
+        };
+
+        static private List<string> simStyleList = new List<string>
         {
             "curlX",
             "curlY",
@@ -407,7 +537,7 @@ namespace HSTA
             "width"
         };
 
-        static private List<string> colorList = new List<string>
+        static private List<string> simColorList = new List<string>
         {
             "rootColor",
             "tipColor",
@@ -423,7 +553,7 @@ namespace HSTA
             "IBLFactor"
         };
 
-        static private List<string> physicsList = new List<string>
+        static private List<string> simPhysicsList = new List<string>
         {
             "collisionRadius",
             "drag",
