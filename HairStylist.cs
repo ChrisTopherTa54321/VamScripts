@@ -105,10 +105,16 @@ namespace HSTA
                     var ui = character.selectedHairGroup?.customizationUI;
                     if( null != ui )
                     {
+                        _undoHairSettings = HairStyle.CreateFromPerson(containingAtom);
                         SuperController.singleton.SetCustomUI(ui);
-
                     }
                 });
+                btn = CreateButton("Load Pre-Open Hair Settings", true);
+                btn.button.onClick.AddListener(() =>
+                {
+                    _undoHairSettings?.ApplyToPerson(containingAtom);
+                });
+
 
             }
             catch (Exception e)
@@ -186,6 +192,7 @@ namespace HSTA
         protected JSONStorableBool _loadPhysics;
 
         protected HairStyle _quickSaved;
+        protected HairStyle _undoHairSettings;
         protected HairStyle _original;
         protected string _lastBrowseDir;
 
@@ -280,7 +287,7 @@ namespace HSTA
             // If we switched styles without loading color, then copy over the color from the last style
             if( colorStyle != null )
             {
-                RestoreStorable(hairControl, colorStyle._savedJson, colorList);
+                colorStyle.ApplyToPerson(aPerson, true, false, false);
             }
         }
 
