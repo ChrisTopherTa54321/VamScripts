@@ -10,7 +10,7 @@ namespace HSTA
     public class HairStylist : MVRScript
     {
         public static string pluginName = "HairStylist";
-        public static string pluginVersion = "V0.8.0";
+        public static string pluginVersion = "V0.8.0+";
         public static string saveExt = "hair";
 
         public override void Init()
@@ -32,8 +32,15 @@ namespace HSTA
                 var btn = CreateButton("Load Preset");
                 btn.button.onClick.AddListener(() =>
                 {
+                    _undoLoadPreset = HairStyle.CreateFromPerson(containingAtom);
                     SuperController.singleton.NormalizeMediaPath(_lastBrowseDir); // This sets the path iff it exists
                     SuperController.singleton.GetMediaPathDialog(HandleLoadPreset, saveExt);
+                });
+
+                btn = CreateButton("Load Pre-Load Preset");
+                btn.button.onClick.AddListener(() =>
+                {
+                    _undoLoadPreset?.ApplyToPerson(containingAtom, _loadColor.val, _loadStyle.val, _loadPhysics.val);
                 });
 
                 _loadStyle = new JSONStorableBool("loadStyle", true);
@@ -195,6 +202,7 @@ namespace HSTA
         protected HairStyle _quickSaved;
         protected HairStyle _undoHairSettings;
         protected HairStyle _original;
+        protected HairStyle _undoLoadPreset;
         protected string _lastBrowseDir;
 
     }
