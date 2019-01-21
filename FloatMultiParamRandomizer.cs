@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,12 +15,14 @@ namespace HSTA
     public class FloatMultiParamRandomizer : MVRScript
     {
         const string pluginName = "FloatMultiParamRandomizer";
-        const string pluginVersion = "V1.0.7";
+        const string pluginVersion = "V1.0.7+";
         const string saveExt = "fmpr";
         public override void Init()
         {
             try
             {
+                _lastBrowseDir = CreateDirectory(GetPluginPath() + @"fmpr_presets\");
+
                 _displayRandomizer = new ParamRandomizer("display", null);
                 _displayRandomizer.UpdateEnabledListEvnt += UpdateEnabledList;
 
@@ -88,11 +90,6 @@ namespace HSTA
 
                 // set atom to current atom to initialize
                 _atomJSON.val = containingAtom.uid;
-
-                if( String.IsNullOrEmpty( _lastBrowseDir ) )
-                {
-                    _lastBrowseDir = GetPluginPath() + @"fmpr_presets\";
-                }
 
                 var spacer = CreateSpacer();
                 spacer.height = 40;
@@ -283,6 +280,25 @@ namespace HSTA
             string pathToScriptFolder = pathToScriptFile.Substring(0, pathToScriptFile.LastIndexOfAny(new char[] { '/', '\\' }) + 1);
             pathToScriptFolder = pathToScriptFolder.Replace('/', '\\');
             return pathToScriptFolder;
+        }
+
+        string CreateDirectory(string aPath)
+        {
+            JSONNode node = new JSONNode();
+            if (!(aPath.EndsWith("/") || aPath.EndsWith(@"\")))
+            {
+                aPath += @"\";
+            }
+
+            try
+            {
+                node.SaveToFile(aPath);
+            }
+            catch (Exception e)
+            {
+                SuperController.LogMessage(e.ToString());
+            }
+            return aPath;
         }
 
         JSONClass GetSaveJson()

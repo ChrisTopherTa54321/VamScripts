@@ -9,7 +9,7 @@ namespace HSTA
     public class HairStylist : MVRScript
     {
         public static string pluginName = "HairStylist";
-        public static string pluginVersion = "V0.3.0";
+        public static string pluginVersion = "V0.3.0+";
         public static string saveExt = "json";
 
         public override void Init()
@@ -22,10 +22,8 @@ namespace HSTA
                     return;
                 }
 
-                if (String.IsNullOrEmpty(_lastBrowseDir))
-                {
-                    _lastBrowseDir = GetPluginPath() + @"hair_presets\";
-                }
+                // Create preset directory
+                _lastBrowseDir = CreateDirectory(GetPluginPath() + @"hair_presets\" );
 
                 pluginLabelJSON.val = pluginName + " " + pluginVersion;
 
@@ -131,6 +129,25 @@ namespace HSTA
             string pathToScriptFolder = pathToScriptFile.Substring(0, pathToScriptFile.LastIndexOfAny(new char[] { '/', '\\' }) + 1);
             pathToScriptFolder = pathToScriptFolder.Replace('/', '\\');
             return pathToScriptFolder;
+        }
+
+        string CreateDirectory( string aPath )
+        {
+            JSONNode node = new JSONNode();
+            if( !( aPath.EndsWith( "/" ) || aPath.EndsWith( @"\" ) ) )
+            {
+                aPath += @"\";
+            }
+
+            try
+            {
+                node.SaveToFile(aPath);
+            }
+            catch( Exception e )
+            {
+                SuperController.LogMessage(e.ToString());
+            }
+            return aPath;
         }
 
         void HandleSavePreset(string aPath)
