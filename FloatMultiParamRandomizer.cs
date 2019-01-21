@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
@@ -296,7 +296,6 @@ namespace HSTA
             }
             catch (Exception e)
             {
-                SuperController.LogMessage(e.ToString());
             }
             return aPath;
         }

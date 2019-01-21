@@ -145,7 +145,6 @@ namespace HSTA
             }
             catch( Exception e )
             {
-                SuperController.LogMessage(e.ToString());
             }
             return aPath;
         }
