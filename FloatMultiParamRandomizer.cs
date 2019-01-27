@@ -151,16 +151,19 @@ namespace HSTA
                 slider = CreateSlider(_displayRandomizer._maxVal, true);
                 slider.label = "Random range max val";
 
-                slider = CreateSlider(_displayRandomizer._percentage, true);
-                slider.label = "Max target val change %";
+                slider = CreateSlider(_displayRandomizer._deltaMinPercent, true);
+                slider.label = "Min target val change %";
 
-                slider = CreateSlider(_displayRandomizer._targetVal, true);
-                slider.label = "Target Value";
-                slider.defaultButtonEnabled = false;
-                slider.quickButtonsEnabled = false;
+                slider = CreateSlider(_displayRandomizer._deltaMaxPercent, true);
+                slider.label = "Max target val change %";
 
                 slider = CreateSlider(_displayRandomizer._curVal, true);
                 slider.label = "Current value\nYou can slide manually";
+                slider.defaultButtonEnabled = false;
+                slider.quickButtonsEnabled = false;
+
+                slider = CreateSlider(_displayRandomizer._targetVal, true);
+                slider.label = "Target Value";
                 slider.defaultButtonEnabled = false;
                 slider.quickButtonsEnabled = false;
 
@@ -765,8 +768,12 @@ namespace HSTA
             _maxVal = new JSONStorableFloat(prefix + "upperValue", 1f, onFloatChanged, 0f, 1f, false);
             _maxVal.storeType = JSONStorableParam.StoreType.Physical;
 
-            _percentage = new JSONStorableFloat(prefix + "percentage", 100.0f, onFloatChanged, 0f, 100f, false);
-            _percentage.storeType = JSONStorableParam.StoreType.Physical;
+            // maxPercentage name must stay 'percentage' for save compatibility.
+            _deltaMaxPercent = new JSONStorableFloat(prefix + "percentage", 100.0f, onDeltaMaxChanged, 0f, 100f, false);
+            _deltaMaxPercent.storeType = JSONStorableParam.StoreType.Physical;
+
+            _deltaMinPercent = new JSONStorableFloat(prefix + "minPercentage", 0.0f, onDeltaMinChanged, 0f, 100f, false);
+            _deltaMinPercent.storeType = JSONStorableParam.StoreType.Physical;
 
             _targetVal = new JSONStorableFloat("targetValue", 0f, 0f, 1f, false, false);
             _curVal = new JSONStorableFloat("currentValue", 0f, onCurValChanged, 0f, 1f, false, true);
@@ -796,7 +803,8 @@ namespace HSTA
             storables.Add(_period);
             storables.Add(_periodRandomMin);
             storables.Add(_periodRandomMax);
-            storables.Add(_percentage);
+            storables.Add(_deltaMinPercent);
+            storables.Add(_deltaMaxPercent);
             storables.Add(_quickness);
             storables.Add(_minVal);
             storables.Add(_maxVal);
@@ -839,7 +847,8 @@ namespace HSTA
             CopyStorableFloat(aDst._period, aSrc._period, aDst._disableHandlers);
             CopyStorableFloat(aDst._periodRandomMin, aSrc._periodRandomMin, aDst._disableHandlers);
             CopyStorableFloat(aDst._periodRandomMax, aSrc._periodRandomMax, aDst._disableHandlers);
-            CopyStorableFloat(aDst._percentage, aSrc._percentage, aDst._disableHandlers);
+            CopyStorableFloat(aDst._deltaMinPercent, aSrc._deltaMinPercent, aDst._disableHandlers);
+            CopyStorableFloat(aDst._deltaMaxPercent, aSrc._deltaMaxPercent, aDst._disableHandlers);
             CopyStorableFloat(aDst._quickness, aSrc._quickness, aDst._disableHandlers);
             CopyStorableFloat(aDst._minVal, aSrc._minVal, aDst._disableHandlers );
             CopyStorableFloat(aDst._maxVal, aSrc._maxVal, aDst._disableHandlers);
@@ -882,12 +891,20 @@ namespace HSTA
                 _targetTime += _period.val;
 
                 // Pick a new random value, but make sure it's within a percentage from our current value
-                float range = ((_maxVal.val - _minVal.val) / 100) * _percentage.val;
-                float randomMin = Math.Max( _curVal.val - range, _minVal.val );
-                float randomMax = Math.Min( _curVal.val + range, _maxVal.val );
+                float range = (_maxVal.val - _minVal.val) / 100;
+                float minDelta = range * _deltaMinPercent.val;
+                float maxDelta = range * _deltaMaxPercent.val;
+
+                float curVal = _curVal.val;
+                float delta = UnityEngine.Random.Range(minDelta, maxDelta);
+                if( UnityEngine.Random.Range(0, 2) == 0 )
+                {
+                    delta *= -1;
+                }
+                float newVal = UnityEngine.Mathf.Clamp(curVal + delta, _minVal.val, _maxVal.val);
 
                 // Start the lerping
-                _targetVal.val = UnityEngine.Random.Range(randomMin, randomMax);
+                _targetVal.val = newVal;
                 _lerping = true;
             }
 
@@ -949,6 +966,30 @@ namespace HSTA
             onFloatChanged(aVal);
         }
 
+        void onDeltaMinChanged(float aVal)
+        {
+            if (!_disableHandlers)
+            {
+                if (_deltaMinPercent.val > _deltaMaxPercent.val)
+                {
+                    _deltaMaxPercent.valNoCallback = aVal;
+                }
+            }
+            onFloatChanged(aVal);
+        }
+
+        void onDeltaMaxChanged(float aVal)
+        {
+            if (!_disableHandlers)
+            {
+                if (_deltaMaxPercent.val < _deltaMinPercent.val)
+                {
+                    _deltaMinPercent.valNoCallback = aVal;
+                }
+            }
+            onFloatChanged(aVal);
+        }
+
         void onFloatChanged( float aVal )
         {
             if (!_disableHandlers && _syncTarget != null)
@@ -963,7 +1004,8 @@ namespace HSTA
         public JSONStorableFloat _period;
         public JSONStorableFloat _periodRandomMin;
         public JSONStorableFloat _periodRandomMax;
-        public JSONStorableFloat _percentage;
+        public JSONStorableFloat _deltaMinPercent;
+        public JSONStorableFloat _deltaMaxPercent;
         public JSONStorableFloat _quickness;
         public JSONStorableFloat _minVal;
         public JSONStorableFloat _maxVal;
