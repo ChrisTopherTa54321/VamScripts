@@ -10,7 +10,7 @@ namespace HSTA
     public class HairStylist : MVRScript
     {
         public static string pluginName = "HairStylist";
-        public static string pluginVersion = "V0.8.0+";
+        public static string pluginVersion = "V0.8.1";
         public static string saveExt = "hair";
 
         public override void Init()
@@ -20,6 +20,14 @@ namespace HSTA
                 if (containingAtom.type != "Person")
                 {
                     SuperController.LogError("Use this plugin on a Person only");
+                    return;
+                }
+
+                // Save the original hair style
+                _original = HairStyle.CreateFromPerson(containingAtom);
+                if( null == _original )
+                {
+                    SuperController.LogError("This plugin only works on SimV2 Hair");
                     return;
                 }
 
@@ -77,7 +85,6 @@ namespace HSTA
                 {
                     _original?.ApplyToPerson(containingAtom, _loadColor.val, _loadStyle.val, _loadPhysics.val);
                 });
-                _original = HairStyle.CreateFromPerson(containingAtom);
 
                 btn = CreateButton("Quick Save");
                 btn.button.onClick.AddListener(() =>
@@ -216,7 +223,11 @@ namespace HSTA
             DAZCharacterSelector character = aPerson?.GetStorableByID("geometry") as DAZCharacterSelector;
 
             // Find relevant storables
-            JSONStorable moveContainer = FindStorableByName(aPerson, "ScalpContainer");
+            JSONStorable moveContainer = FindStorableByName(aPerson, "ScalpContainer", true);
+            if( null == moveContainer )
+            {
+                return null;
+            }
             JSONStorable hairSettings = FindStorableByName(aPerson, "HairSettings");
             JSONStorable scalps = FindStorableByName( aPerson, "Scalps");
             JSONStorable styles = FindStorableByName(aPerson, "Styles");
@@ -406,13 +417,12 @@ namespace HSTA
         private void SaveStorable( JSONStorable aStorable, out JsonDict aDict )
         {
             aDict = new JsonDict();
-            foreach(var param in aStorable.GetAllParamAndActionNames() )
+            foreach(var param in aStorable.GetAllFloatAndColorParamNames() )
             {
                 var type = aStorable.GetParamOrActionType(param);
                 JSONClass json = new JSONClass();
                 json["type"] = type.ToString();
                 json["id"] = param;
-
                 JSONClass storableParams = new JSONClass();
 
                 switch (type)
@@ -491,7 +501,7 @@ namespace HSTA
         }
 
 
-        static JSONStorable FindStorableByName( Atom aAtom, string aName )
+        static JSONStorable FindStorableByName( Atom aAtom, string aName, bool aSuppressError = false )
         {
             JSONStorable ret = null;
             foreach (var storable in aAtom.GetComponentsInChildren<JSONStorable>())
@@ -503,7 +513,7 @@ namespace HSTA
                 }
             }
 
-            if( null == ret )
+            if( null == ret && !aSuppressError )
             {
                 SuperController.LogError("Couldn't find storable named " + aName);
             }
@@ -542,7 +552,8 @@ namespace HSTA
             "length1",
             "length2",
             "length3",
-            "width"
+            "width",
+            "maxSpread",
         };
 
         static private List<string> simColorList = new List<string>
@@ -565,14 +576,20 @@ namespace HSTA
         {
             "collisionRadius",
             "drag",
-            "elasticityOffset",
-            "elasticityMultiplier",
+            "rootRigidity",
+            "mainRigidity",
+            "tipRigidity",
+            "rigidityRolloffPower",
             "friction",
             "gravityMultiplier",
-            "quickMultiplier",
+            "weight",
             "iterations",
+            "cling",
+            "clingRolloff",
+            "snap",
+            "bendResistance",
+            "hairMultiplier",
             "curveDensity",
-            "hairMultiplier"
         };
     }
 
