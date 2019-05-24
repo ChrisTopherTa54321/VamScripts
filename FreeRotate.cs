@@ -100,14 +100,14 @@ namespace HSTA
                 if ( btn1 )
                 {
                     // Rotate
-                    if( pitchActive && pitchGreater )
+                    if( pitchActive )
                     {
-                        _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.right, -5.0f * pitchVal);
+                        _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.right, 5.0f * pitchVal);
                         //Vector3 axis = sc.OVRCenterCamera.transform.right;
                         //rotateTarget.Rotate(axis, pitchVal, Space.World);
                         didSomething = true;
                     }
-                   else if( rollActive && !pitchGreater )
+                   if( rollActive )
                     {
                         _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.forward,  -5.0f * rollVal);
                         didSomething = true;
