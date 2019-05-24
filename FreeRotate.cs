@@ -1,9 +1,13 @@
+using System;
 using UnityEngine;
 
 namespace HSTA
 {
     public class FreeRotate : MVRScript
     {
+        const string pluginName = "FreeRotate";
+        const string pluginVersion = "V1.0.0";
+        const string pluginAuthor = "hsthrowaway5";
         const float DEADZONE = 0.01f;
 
         OVRInput.Controller[] _controllers = { OVRInput.Controller.RTouch, OVRInput.Controller.LTouch };
@@ -21,6 +25,7 @@ namespace HSTA
             try
             {
                 _navigationRig = SuperController.singleton.navigationRig;
+                pluginLabelJSON.val = String.Format("{0} {1}, by {2}",  pluginName, pluginVersion, pluginAuthor);
             }
             catch (System.Exception e)
             {
@@ -103,8 +108,6 @@ namespace HSTA
                     if( pitchActive )
                     {
                         _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.right, 5.0f * pitchVal);
-                        //Vector3 axis = sc.OVRCenterCamera.transform.right;
-                        //rotateTarget.Rotate(axis, pitchVal, Space.World);
                         didSomething = true;
                     }
                    if( rollActive )
