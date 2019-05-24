@@ -14,11 +14,13 @@ namespace HSTA
 
         private float _doubleClickTimer = 0.0f;
         private bool _bothPressed = false;
+        private Transform _navigationRig;
 
         public override void Init()
         {
             try
             {
+                _navigationRig = SuperController.singleton.navigationRig;
             }
             catch (System.Exception e)
             {
@@ -90,23 +92,24 @@ namespace HSTA
 
 
 
-            Transform rotateTarget = sc.navigationRigParent;
-            if( !bothPressed )
+            bool pitchActive = Mathf.Abs(pitchVal) > DEADZONE;
+            bool rollActive = Mathf.Abs(rollVal) > DEADZONE;
+            bool pitchGreater = Mathf.Abs(pitchVal) > Mathf.Abs(rollVal);
+            if ( !bothPressed )
             {
                 if ( btn1 )
                 {
                     // Rotate
-
-                    if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
+                    if( pitchActive && pitchGreater )
                     {
-                        Vector3 axis = sc.OVRCenterCamera.transform.right;
-                        rotateTarget.Rotate(axis, pitchVal, Space.World);
+                        _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.right, -5.0f * pitchVal);
+                        //Vector3 axis = sc.OVRCenterCamera.transform.right;
+                        //rotateTarget.Rotate(axis, pitchVal, Space.World);
                         didSomething = true;
                     }
-                    if (rollVal > DEADZONE || rollVal < -DEADZONE)
+                   else if( rollActive && !pitchGreater )
                     {
-                        Vector3 axis = sc.OVRCenterCamera.transform.forward;
-                        rotateTarget.Rotate(axis, -rollVal, Space.World);
+                        _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.forward,  -5.0f * rollVal);
                         didSomething = true;
                     }
                 }
@@ -115,18 +118,18 @@ namespace HSTA
                 if( btn2 )
                 {
                     // Fly
-                    if( pitchVal > DEADZONE || pitchVal < -DEADZONE )
+                    if( pitchActive )
                     {
                         Vector3 dir = sc.OVRCenterCamera.transform.forward;
                         dir *= (pitchVal * Time.deltaTime / Time.timeScale);
-                        sc.navigationRig.position += dir;
+                        _navigationRig.position += dir;
                         didSomething = true;
                     }
-                    if (rollVal > DEADZONE || rollVal < -DEADZONE)
+                    if ( rollActive )
                     {
                         Vector3 dir = sc.OVRCenterCamera.transform.right;
                         dir *= (rollVal * Time.deltaTime / Time.timeScale);
-                        sc.navigationRig.position += dir;
+                        _navigationRig.position += dir;
                         didSomething = true;
                     }
                 }
@@ -134,19 +137,17 @@ namespace HSTA
             else if( !doubleClicked ) // Both pressed, no double click
             {
                 // Fly up/down
-                if (pitchVal > DEADZONE || pitchVal < -DEADZONE)
+                if ( pitchActive && pitchGreater )
                 {
                     Vector3 dir = sc.OVRCenterCamera.transform.up;
                     dir *= (pitchVal * Time.deltaTime / Time.timeScale);
-                    sc.navigationRig.position += dir;
+                    _navigationRig.position += dir;
                     didSomething = true;
                 }
-                if (rollVal > DEADZONE || rollVal < -DEADZONE)
+                if ( rollActive && !pitchGreater)
                 {
                     // Rotate left/right
-
-                    Vector3 axis = sc.OVRCenterCamera.transform.up;
-                    rotateTarget.Rotate(axis, rollVal, Space.World);
+                    _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.up, 5.0f * rollVal);
                     didSomething = true;
                 }
             }
@@ -165,10 +166,10 @@ namespace HSTA
                 }
                 else
                 {
-                    Vector3 rotation = SuperController.singleton.navigationRig.rotation.eulerAngles;
+                    Vector3 rotation = _navigationRig.rotation.eulerAngles;
                     rotation.x = 0;
                     rotation.z = 0;
-                    SuperController.singleton.navigationRig.rotation = Quaternion.Euler(rotation);
+                    _navigationRig.rotation = Quaternion.Euler(rotation);
                 }
                 didSomething = true;
             }
@@ -178,6 +179,7 @@ namespace HSTA
             if( didSomething )
             {
                 sc.disableNavigation = true;
+                sc.navigationRig = null;
                 _enableNavigationCountdown = NAVIGATION_DISABLE_TIMER;
             }
             else if( _enableNavigationCountdown > 0 )
@@ -186,6 +188,7 @@ namespace HSTA
                 if( _enableNavigationCountdown <= 0.0f )
                 {
                     _enableNavigationCountdown = 0;
+                    sc.navigationRig = _navigationRig;
                     sc.disableNavigation = false;
                 }
             }
