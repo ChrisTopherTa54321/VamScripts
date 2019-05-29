@@ -44,7 +44,10 @@ namespace HSTA
 
         protected void Start()
         {
-            StartRoutine();
+            if (_animationPattern || _audioSource)
+            {
+                StartRoutine();
+            }
         }
 
 
