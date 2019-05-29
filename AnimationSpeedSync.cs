@@ -8,7 +8,10 @@ namespace HSTA
 
     public class AnimationSpeedSync : MVRScript
     {
-        const string pluginText = "V1.0.0";
+        const string pluginName = "AnimationSpeedSync";
+        const string pluginVersion = "V1.0.0+";
+        const string pluginAuthor = "hsthrowaway5";
+
 
         public override void Init()
         {
@@ -17,12 +20,21 @@ namespace HSTA
                 _animationPattern = containingAtom.GetStorableByID("AnimationPattern") as AnimationPattern;
                 if (null == _animationPattern )
                 {
-                    SuperController.LogError("Use this plugin on a AnimationPattern only");
-                    return;
+                    _audioSource = containingAtom.GetStorableByID("AudioSource") as AudioSourceControl;
+                    if( null == _audioSource )
+                    {
+
+                        pluginLabelJSON.val = String.Format("Error - Use on Animation Pattern or AudioSource only");
+                        SuperController.LogError("Use this plugin on a AnimationPattern or AudioSource only");
+                        return;
+                    }
                 }
-                _speedJSON = _animationPattern.GetFloatJSONParam("speed");
+                _speedJSON = _animationPattern?.GetFloatJSONParam("speed");
+                _pitchJSON = _audioSource?.GetFloatJSONParam("pitch");
                 _enabled = new JSONStorableBool("Sync animation speed", true);
                 CreateToggle(_enabled);
+
+                pluginLabelJSON.val = String.Format("{0} {1}, by {2}", pluginName, pluginVersion, pluginAuthor);
             }
             catch (Exception e)
             {
@@ -30,26 +42,118 @@ namespace HSTA
             }
         }
 
- 
-        protected void Update()
+        protected void Start()
         {
-            try
+            StartRoutine();
+        }
+
+
+        protected void OnDisable()
+        {
+            StopRoutines();
+        }
+
+        protected void OnEnable()
+        {
+            StartRoutine();
+        }
+
+
+        private void StartRoutine()
+        {
+            if (null == _coroutine)
             {
-                if( _animationPattern != null && _enabled.val )
+                _coroutine = StartCoroutine(Update_Routine());
+            }
+        }
+
+        private void StopRoutines()
+        {
+            if (null != _coroutine)
+            {
+                StopCoroutine(_coroutine);
+                _coroutine = null;
+            }
+        }
+
+
+        protected IEnumerator Update_Routine()
+        {
+
+            while (true)
+            {
+                float waitTime = 0.1f;
+                if (waitTime > 0.0f)
                 {
-                    _speedJSON.val = SuperController.singleton.motionAnimationMaster.playbackSpeed;
+                    yield return new WaitForSecondsRealtime(waitTime);
+                }
+                else
+                {
+                    yield return new WaitForFixedUpdate();
+                    waitTime = Time.fixedUnscaledDeltaTime;
+                }
+
+                try
+                {
+                    if (_enabled.val)
+                    {
+                        if (_animationPattern)
+                        {
+                            HandleAnimationPattern();
+                        }
+                        if (_audioSource)
+                        {
+                            HandleAudioSource();
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    SuperController.LogError(e.ToString());
                 }
             }
-            catch (Exception e)
+        }
+
+        protected void HandleAnimationPattern()
+        {
+            _speedJSON.val = SuperController.singleton.motionAnimationMaster.playbackSpeed;
+            bool gamePaused = SuperController.singleton.freezeAnimation;
+            if (!_paused && gamePaused)
             {
-                SuperController.LogError("Exception caught: " + e);
+                _animationPattern.Pause();
+                _paused = true;
+            }
+            else if (_paused && !gamePaused)
+            {
+                _animationPattern.UnPause();
+                _paused = false;
             }
         }
 
+        protected void HandleAudioSource()
+        {
+            float newPitch = TimeControl.singleton.currentScale * SuperController.singleton.motionAnimationMaster.playbackSpeed;
+            _pitchJSON.val = newPitch;
+            bool gamePaused = SuperController.singleton.freezeAnimation;
+            if (!_paused && gamePaused)
+            {
+                _audioSource.Pause();
+                _paused = true;
+            }
+            else if (_paused && !gamePaused)
+            {
+                _audioSource.UnPause();
+                _paused = false;
+            }
+        }
 
         JSONStorableBool _enabled;
         JSONStorableFloat _speedJSON;
+        JSONStorableFloat _pitchJSON;
+        bool _paused;
         AnimationPattern _animationPattern;
+        AudioSourceControl _audioSource;
+        protected Coroutine _coroutine = null;
 
     }
 
