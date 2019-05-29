@@ -6,7 +6,7 @@ namespace HSTA
     public class FreeRotate : MVRScript
     {
         const string pluginName = "FreeRotate";
-        const string pluginVersion = "V1.0.0";
+        const string pluginVersion = "V1.0.0+";
         const string pluginAuthor = "hsthrowaway5";
         const float DEADZONE = 0.01f;
 
@@ -107,12 +107,12 @@ namespace HSTA
                     // Rotate
                     if( pitchActive )
                     {
-                        _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.right, 5.0f * pitchVal);
+                        _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.right, 100.0f * Time.unscaledDeltaTime * pitchVal );
                         didSomething = true;
                     }
                    if( rollActive )
                     {
-                        _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.forward,  -5.0f * rollVal);
+                        _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.forward,  -100.0f * Time.unscaledDeltaTime * rollVal);
                         didSomething = true;
                     }
                 }
@@ -124,14 +124,14 @@ namespace HSTA
                     if( pitchActive )
                     {
                         Vector3 dir = sc.OVRCenterCamera.transform.forward;
-                        dir *= (pitchVal * Time.deltaTime / Time.timeScale);
+                        dir *= (pitchVal * Time.unscaledDeltaTime );
                         _navigationRig.position += dir;
                         didSomething = true;
                     }
                     if ( rollActive )
                     {
                         Vector3 dir = sc.OVRCenterCamera.transform.right;
-                        dir *= (rollVal * Time.deltaTime / Time.timeScale);
+                        dir *= (rollVal * Time.unscaledDeltaTime );
                         _navigationRig.position += dir;
                         didSomething = true;
                     }
@@ -143,14 +143,14 @@ namespace HSTA
                 if ( pitchActive && pitchGreater )
                 {
                     Vector3 dir = sc.OVRCenterCamera.transform.up;
-                    dir *= (pitchVal * Time.deltaTime / Time.timeScale);
+                    dir *= (pitchVal * Time.unscaledDeltaTime);
                     _navigationRig.position += dir;
                     didSomething = true;
                 }
                 if ( rollActive && !pitchGreater)
                 {
                     // Rotate left/right
-                    _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.up, 5.0f * rollVal);
+                    _navigationRig.RotateAround(sc.OVRCenterCamera.transform.position, sc.OVRCenterCamera.transform.up, 100.0f * Time.unscaledDeltaTime * rollVal);
                     didSomething = true;
                 }
             }
@@ -187,7 +187,7 @@ namespace HSTA
             }
             else if( _enableNavigationCountdown > 0 )
             {
-                _enableNavigationCountdown -= Time.deltaTime;
+                _enableNavigationCountdown -= Time.unscaledDeltaTime;
                 if( _enableNavigationCountdown <= 0.0f )
                 {
                     _enableNavigationCountdown = 0;
