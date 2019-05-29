@@ -184,7 +184,7 @@ namespace HSTA
                 RestoreParamsFromSaveJson();
             }
             UpdateEnabledList();
-            _coroutine = StartCoroutine(Update_Routine());
+            StartRoutine();
         }
 
         protected void OnDisable()
