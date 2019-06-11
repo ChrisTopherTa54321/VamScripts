@@ -12,7 +12,8 @@ namespace HSTA
         const string pluginVersion = "V1.0.0+";
         const string pluginAuthor = "hsthrowaway5";
 
-
+        const float UPDATE_RATE_MS = 0.02f;
+        
         public override void Init()
         {
             try
@@ -85,7 +86,7 @@ namespace HSTA
 
             while (true)
             {
-                float waitTime = 0.1f;
+                float waitTime = UPDATE_RATE_MS;
                 if (waitTime > 0.0f)
                 {
                     yield return new WaitForSecondsRealtime(waitTime);
