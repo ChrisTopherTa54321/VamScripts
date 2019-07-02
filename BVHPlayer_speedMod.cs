@@ -31,6 +31,7 @@ namespace ElkVR {
       - Interpolate animation
       - Ping pong
       - Remember previous folder
+     * 1.0.0_speedMod - Sync playback speed with global animation speed mod - hsthrowaway5
  */
 
 public class BVHPlayer : MVRScript {
@@ -100,7 +101,13 @@ public class BVHPlayer : MVRScript {
     }
 
     void UpdateSpeed(float speed) {
+        float oldFrameTime = frameTime;
         frameTime = bvh.frameTime / (speed * 0.01f);
+
+        // If speed crosses zero then reverse playback direction
+        if( ( oldFrameTime >= 0 ) != ( frameTime >= 0 ) ) {
+            reverse = !reverse;
+        }
     }
 
     void UpdateStatus() {
@@ -396,9 +403,18 @@ public class BVHPlayer : MVRScript {
             if(bvh == null || bvh.nFrames == 0)
                 return;
 
+            // Sync playback speed with global speed
+            float playSpeed = SuperController.singleton.motionAnimationMaster.playbackSpeed;
+            bool gamePaused = SuperController.singleton.freezeAnimation;
+            if( gamePaused )
+                {
+                return;
+                }
+            UpdateSpeed( 100 * playSpeed );
+
             if(playing) {
                 elapsed += Time.deltaTime;
-                if(elapsed >= frameTime) {
+                if(elapsed >= Math.Abs(frameTime)) {
                     elapsed = 0;
                     if(reverse)
                         frame--;
@@ -455,7 +471,7 @@ public class BVHPlayer : MVRScript {
                     // Interpolate in reverse
                     var frm = bvh.ReadFrame(frame);
                     var to = bvh.ReadFrame(frame - 1);
-                    float t = elapsed / frameTime;
+                    float t = elapsed / Math.Abs( frameTime );
                     UpdateModel(Interpolate(frm, to, t));
                 }
             }
@@ -468,7 +484,7 @@ public class BVHPlayer : MVRScript {
                     // Interpolate
                     var frm = bvh.ReadFrame(frame);
                     var to = bvh.ReadFrame(frame + 1);
-                    float t = elapsed / frameTime;
+                    float t = elapsed / Math.Abs( frameTime );
                     UpdateModel(Interpolate(frm, to, t));
                 }
             }
